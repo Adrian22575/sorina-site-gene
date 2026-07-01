@@ -1,9 +1,9 @@
 const allowedMethods = ['POST']
 const allowedServices = new Set([
-  'Natural Effect',
-  'Soft Effect',
-  'Intense Effect',
-  'Lash / Brow Lamination',
+  'Efect natural',
+  'Volum delicat',
+  'Efect intens',
+  'Laminare gene / sprancene',
 ])
 
 function sendJson(response, status, payload) {
@@ -35,7 +35,7 @@ export default async function handler(request, response) {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!supabaseUrl || !serviceRoleKey) {
-    return sendJson(response, 503, { error: 'Booking is not configured yet.' })
+    return sendJson(response, 503, { error: 'Programarile nu sunt configurate inca.' })
   }
 
   let body = {}
@@ -43,7 +43,7 @@ export default async function handler(request, response) {
     try {
       body = JSON.parse(request.body)
     } catch {
-      return sendJson(response, 400, { error: 'Invalid request body.' })
+      return sendJson(response, 400, { error: 'Cererea trimisa nu este valida.' })
     }
   } else if (typeof request.body === 'object' && request.body !== null) {
     body = request.body

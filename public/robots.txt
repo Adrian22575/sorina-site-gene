@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://sorina-site-gene.vercel.app/sitemap.xml

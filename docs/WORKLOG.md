@@ -90,3 +90,24 @@
   - No public policies exist for `appointments`.
 - Did not modify `facultate-app`.
 - Next needed step: add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to the dedicated Vercel project `sorina-site-gene`.
+
+## 2026-07-01 Romanian SEO Pass
+
+- Created and followed a temporary sequential plan in `docs/TEMP_SEO_RO_GOALS.md`, then deleted it after verification.
+- Researched current official SEO guidance from Google Search Central and schema.org, then recorded the sources in `docs/RESEARCH_NOTES.md`.
+- Rewrote visible website copy in Romanian:
+  - Header navigation and CTAs.
+  - Hero, proof strip, services, promo, gallery, results, about, reviews, FAQ, booking, contact, and footer.
+  - Booking form labels, submit state, select options, and API fallback messages.
+- Replaced English service names with Romanian service names and updated backend validation to match.
+- Added SEO foundations:
+  - `html lang="ro"`.
+  - Romanian title and meta description.
+  - Canonical URL for the live Vercel site.
+  - Open Graph and Twitter preview tags.
+  - BeautySalon JSON-LD with no invented phone, address, hours, reviews, awards, prices, or certifications.
+  - `public/robots.txt`.
+  - `public/sitemap.xml`.
+  - Public Open Graph image copied from the current hero asset.
+- Changed the hero visual to render as a standard HTML image with meaningful alt text.
+- Left factual business fields pending until supplied by the user/Sorina.

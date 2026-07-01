@@ -15,63 +15,88 @@ import {
   Sparkles,
   Star,
 } from 'lucide-react'
+import heroImage from './assets/hero.png'
 import './App.css'
 
 const services = [
   {
-    title: 'Natural Effect',
+    title: 'Efect natural',
     duration: '60 min',
-    price: 'From [price]',
+    price: 'Pret de completat',
     note: 'Gene fine, aerisite, pentru un rezultat discret si elegant.',
   },
   {
-    title: 'Soft Effect',
+    title: 'Volum delicat',
     duration: '90 min',
-    price: 'From [price]',
-    note: 'Volum delicat, privire luminoasa si linie rafinata.',
+    price: 'Pret de completat',
+    note: 'Volum fin, privire luminoasa si linie rafinata.',
   },
   {
-    title: 'Intense Effect',
+    title: 'Efect intens',
     duration: '120 min',
-    price: 'From [price]',
-    note: 'Efect vizibil, construit cu atentie pe fizionomia ochilor.',
+    price: 'Pret de completat',
+    note: 'Efect vizibil, construit cu atentie dupa forma ochilor.',
   },
   {
-    title: 'Lash / Brow Lamination',
+    title: 'Laminare gene / sprancene',
     duration: '60 min',
-    price: 'From [price]',
+    price: 'Pret de completat',
     note: 'Definire si aranjare pentru gene sau sprancene naturale.',
   },
 ]
 
 const proof = [
-  { icon: Award, value: '[Award]', label: 'Champion' },
-  { icon: Sparkles, value: '3+', label: 'Years experience' },
-  { icon: Heart, value: '1200+', label: 'Clients' },
-  { icon: ShieldCheck, value: '[Cert.]', label: 'Certified' },
+  { icon: Award, value: 'De completat', label: 'Premii', note: 'Se adauga doar dupa confirmare.' },
+  { icon: Sparkles, value: 'De completat', label: 'Experienta', note: 'Anii reali vor fi completati de Sorina.' },
+  { icon: Heart, value: 'De completat', label: 'Cliente', note: 'Numarul final trebuie verificat.' },
+  { icon: ShieldCheck, value: 'De completat', label: 'Certificari', note: 'Fara afirmatii neverificate.' },
 ]
 
 const faq = [
-  'Cat rezista extensiile de gene?',
-  'Doare aplicarea extensiilor?',
-  'Pot afecta genele naturale?',
-  'Cum ma pregatesc inainte de programare?',
-  'La cat timp se face intretinerea?',
+  {
+    question: 'Cat rezista extensiile de gene?',
+    answer: 'Rezistenta depinde de ritmul natural de crestere, tipul genelor si ingrijirea de acasa. Intervalul potrivit pentru intretinere se stabileste la consultatie.',
+  },
+  {
+    question: 'Doare aplicarea extensiilor?',
+    answer: 'Aplicarea trebuie sa fie confortabila. Daca apare sensibilitate, se ajusteaza pozitia sau tehnica pentru ca programarea sa ramana calma.',
+  },
+  {
+    question: 'Pot afecta genele naturale?',
+    answer: 'Extensiile sunt gandite sa respecte genele naturale atunci cand lungimea, grosimea si densitatea sunt alese corect.',
+  },
+  {
+    question: 'Cum ma pregatesc inainte de programare?',
+    answer: 'Vino fara machiaj in zona ochilor si evita produsele uleioase inainte de aplicare. Confirmarea finala se face inainte de programare.',
+  },
+  {
+    question: 'La cat timp se face intretinerea?',
+    answer: 'Ritmul de intretinere se recomanda individual, dupa stilul de viata si felul in care se pastreaza extensiile.',
+  },
 ]
 
 const gallery = [
-  'Large gallery image',
-  'Photo',
-  'Photo',
-  'Photo',
-  'Photo',
+  'Fotografie principala din galerie',
+  'Detaliu lucrare',
+  'Portret',
+  'Atmosfera studio',
+  'Rezultat final',
 ]
 
 const results = [
-  { title: 'Natural lift', before: 'Before', after: 'After' },
-  { title: 'Soft volume', before: 'Before', after: 'After' },
-  { title: 'Intense set', before: 'Before', after: 'After' },
+  { title: 'Ridicare naturala', before: 'Inainte', after: 'Dupa' },
+  { title: 'Volum delicat', before: 'Inainte', after: 'Dupa' },
+  { title: 'Set intens', before: 'Inainte', after: 'Dupa' },
 ]
+
+function slugify(value) {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+}
 
 function Button({ children, href = '#booking', tone = 'dark' }) {
   return (
@@ -81,10 +106,10 @@ function Button({ children, href = '#booking', tone = 'dark' }) {
   )
 }
 
-function ImageSlot({ label, tall = false }) {
+function ImageSlot({ label, tall = false, src, alt }) {
   return (
-    <div className={`image-slot ${tall ? 'image-slot-tall' : ''}`} aria-label={label}>
-      <span>{label}</span>
+    <div className={`image-slot ${tall ? 'image-slot-tall' : ''}`} aria-label={src ? undefined : label}>
+      {src ? <img src={src} alt={alt || label} /> : <span>{label}</span>}
     </div>
   )
 }
@@ -101,8 +126,8 @@ function SectionIntro({ eyebrow, title, children, centered = false }) {
 
 function ServiceCard({ service }) {
   return (
-    <article className="service-card" id={`service-${service.title.toLowerCase().replaceAll(' ', '-')}`}>
-      <ImageSlot label="Service image" />
+    <article className="service-card" id={`service-${slugify(service.title)}`}>
+      <ImageSlot label={`Imagine pentru ${service.title}`} />
       <div className="service-body">
         <h3>{service.title}</h3>
         <p>{service.note}</p>
@@ -110,8 +135,8 @@ function ServiceCard({ service }) {
           <span>{service.price}</span>
           <span><Clock size={15} /> {service.duration}</span>
         </div>
-        <a className="learn-more" href="#booking" aria-label={`Learn more about ${service.title}`}>
-          Learn more <ArrowRight size={15} />
+        <a className="learn-more" href="#booking" aria-label={`Cere detalii pentru ${service.title}`}>
+          Cere detalii <ArrowRight size={15} />
         </a>
       </div>
     </article>
@@ -140,10 +165,8 @@ function BeforeAfterCard({ item }) {
         onPointerMove={updateFromPointer}
         onPointerDown={updateFromPointer}
       >
-        <div className="comparison-layer comparison-before">
-        </div>
-        <div className="comparison-layer comparison-after">
-        </div>
+        <div className="comparison-layer comparison-before" />
+        <div className="comparison-layer comparison-after" />
         <span className="comparison-label comparison-label-before">{item.before}</span>
         <span className="comparison-label comparison-label-after">{item.after}</span>
         <div className="comparison-divider" />
@@ -154,14 +177,14 @@ function BeforeAfterCard({ item }) {
           min="8"
           max="92"
           value={position}
-          aria-label={`${item.title}: drag to compare before and after`}
+          aria-label={`${item.title}: gliseaza pentru comparatia inainte si dupa`}
           onInput={updateFromRange}
           onChange={updateFromRange}
         />
       </div>
       <div className="comparison-caption">
         <strong>{item.title}</strong>
-        <span>Before / After</span>
+        <span>Inainte / dupa</span>
       </div>
     </article>
   )
@@ -205,17 +228,17 @@ export default function App() {
   return (
     <main>
       <header className="site-header">
-        <a className="brand" href="#home">[LOGO]</a>
+        <a className="brand" href="#home">Sorina Lash Studio</a>
         <nav aria-label="Navigatie principala">
-          <a href="#services">Services</a>
-          <a href="#gallery">Gallery</a>
-          <a href="#results">Results</a>
-          <a href="#about">About</a>
-          <a href="#reviews">Reviews</a>
-          <a href="#faq">FAQ</a>
+          <a href="#services">Servicii</a>
+          <a href="#gallery">Galerie</a>
+          <a href="#results">Rezultate</a>
+          <a href="#about">Despre</a>
+          <a href="#reviews">Recenzii</a>
+          <a href="#faq">Intrebari</a>
           <a href="#contact">Contact</a>
         </nav>
-        <Button href="#booking" tone="outline">Book appointment</Button>
+        <Button href="#booking" tone="outline">Programeaza-te</Button>
       </header>
 
       <section className="hero" id="home">
@@ -228,7 +251,7 @@ export default function App() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45 }}
             >
-              Premium lash studio
+              Studio premium de gene in Bucuresti
             </motion.p>
             <motion.h1
               initial={{ opacity: 0, y: 18 }}
@@ -243,7 +266,7 @@ export default function App() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.16, duration: 0.55 }}
             >
-              Un rezultat premium porneste de la consultatie, forma ochilor si ritmul tau de viata.
+              Sorina construieste fiecare set dupa forma ochilor, stilul tau si confortul genelor naturale.
             </motion.p>
             <motion.p
               className="hero-note"
@@ -251,7 +274,7 @@ export default function App() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.55 }}
             >
-              Experienta este gandita pentru efecte personalizate, aplicare confortabila si rezultate care arata bine zi de zi.
+              Alege un efect natural, delicat sau intens si trimite o cerere de programare pentru confirmare.
             </motion.p>
             <motion.div
               className="hero-actions"
@@ -260,9 +283,9 @@ export default function App() {
               transition={{ delay: 0.24, duration: 0.55 }}
             >
               <Button>
-                Book your appointment <ArrowRight size={16} />
+                Cere programare <ArrowRight size={16} />
               </Button>
-              <Button href="#services" tone="light">View services</Button>
+              <Button href="#services" tone="light">Vezi serviciile</Button>
             </motion.div>
           </div>
           <motion.div
@@ -271,10 +294,15 @@ export default function App() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.18, duration: 0.7 }}
           >
-            <ImageSlot label="Hero image / close-up lash photo" tall />
+            <ImageSlot
+              src={heroImage}
+              label="Detaliu premium pentru extensii de gene"
+              alt="Prim-plan editorial cu gene stilizate pentru Sorina Lash Studio"
+              tall
+            />
             <div className="hero-badge">
-              <p className="eyebrow">[Award placeholder]</p>
-              <strong>National & International</strong>
+              <p className="eyebrow">Detalii verificate in curand</p>
+              <strong>Premii si certificari dupa confirmare</strong>
             </div>
           </motion.div>
         </div>
@@ -288,7 +316,7 @@ export default function App() {
               <Icon size={28} />
               <strong>{item.value}</strong>
               <span>{item.label}</span>
-              <small>[Text placeholder]</small>
+              <small>{item.note}</small>
             </div>
           )
         })}
@@ -297,10 +325,10 @@ export default function App() {
       <section className="section" id="services">
         <SectionIntro
           centered
-          eyebrow="Section title"
-          title="Our Services"
+          eyebrow="Servicii"
+          title="Extensii de gene si laminare"
         >
-          Servicii premium pentru efecte naturale, soft sau intense, adaptate la privirea ta.
+          Servicii premium pentru efecte naturale, delicate sau intense, adaptate la privirea ta.
         </SectionIntro>
         <div className="service-grid">
           {services.map((service) => (
@@ -312,19 +340,19 @@ export default function App() {
       <section className="promo">
         <div className="promo-icon"><Gift size={28} /></div>
         <div>
-          <p className="eyebrow">Special offer / promo</p>
-          <h2>[Promo placeholder]</h2>
-          <p>Loc pentru o reducere reala, pachet sau campanie cu termen clar.</p>
+          <p className="eyebrow">Oferta speciala</p>
+          <h2>Promotie de completat</h2>
+          <p>Loc rezervat pentru o reducere reala, un pachet sau o campanie cu termen clar.</p>
         </div>
-        <Button tone="light">Claim offer <ArrowRight size={16} /></Button>
+        <Button tone="light">Cere detalii <ArrowRight size={16} /></Button>
       </section>
 
       <section className="section muted" id="gallery">
         <SectionIntro
-          eyebrow="Section title"
-          title="Lash Gallery"
+          eyebrow="Galerie"
+          title="Lucrari si atmosfera de studio"
         >
-          Galerie pentru lucrari reale, atmosfera de studio, portret si detalii.
+          Galerie pentru lucrari reale, portrete, detalii de aplicare si imagini din studio.
         </SectionIntro>
         <div className="gallery-grid">
           {gallery.map((item, index) => (
@@ -335,10 +363,10 @@ export default function App() {
 
       <section className="section results" id="results">
         <SectionIntro
-          eyebrow="Section title"
-          title="Real Results"
+          eyebrow="Rezultate"
+          title="Comparatii inainte si dupa"
         >
-          Comparatii vizuale pentru a vedea diferenta dintre inainte si dupa.
+          Spatiu pentru fotografii reale, ca vizitatoarele sa inteleaga diferenta dintre efecte.
         </SectionIntro>
         <div className="comparison-grid">
           {results.map((item) => (
@@ -348,48 +376,51 @@ export default function App() {
       </section>
 
       <section className="section split" id="about">
-        <ImageSlot label="Owner portrait" tall />
+        <ImageSlot label="Portret Sorina" tall />
         <div>
-          <p className="eyebrow">Section title</p>
-          <h2>About Your Lash Artist</h2>
+          <p className="eyebrow">Despre Sorina</p>
+          <h2>Un stil de lucru atent, curat si personalizat</h2>
           <p>
-            Loc pentru povestea Sorinei, experienta, premii, stil de lucru si atentia la detaliu.
-            Pozitionarea ramane premium, personala si foarte exacta.
+            Loc pentru povestea Sorinei, experienta reala, pregatire, premii si felul in care alege
+            lungimea, curbura si densitatea potrivita pentru fiecare clienta.
           </p>
           <ul className="check-list">
-            <li><Sparkles size={18} /> Precision & artistry</li>
-            <li><ShieldCheck size={18} /> Premium products</li>
-            <li><Heart size={18} /> Customized looks</li>
-            <li><Clock size={18} /> Comfort focused</li>
+            <li><Sparkles size={18} /> Precizie si simt estetic</li>
+            <li><ShieldCheck size={18} /> Produse de completat dupa confirmare</li>
+            <li><Heart size={18} /> Efecte personalizate</li>
+            <li><Clock size={18} /> Programare gandita pentru confort</li>
           </ul>
         </div>
       </section>
 
       <section className="section reviews-faq" id="reviews">
         <div>
-          <p className="eyebrow">Section title</p>
-          <h2>What Clients Say</h2>
+          <p className="eyebrow">Recenzii</p>
+          <h2>Ce spun clientele</h2>
           <div className="review-grid">
             {[1, 2, 3].map((item) => (
               <div className="review-card" key={item}>
-                <div className="stars" aria-label="5 stele">
+                <div className="stars" aria-label="Recenzie de 5 stele, de completat cu dovada reala">
                   {[...Array(5)].map((_, index) => <Star key={index} size={16} fill="currentColor" />)}
                 </div>
-                <p>[Testimonial placeholder about experience, attention to detail, elegance and results.]</p>
-                <strong>[Client name]</strong>
+                <p>Recenzie reala de completat dupa ce primim acordul clientei pentru publicare.</p>
+                <strong>Nume clienta de completat</strong>
               </div>
             ))}
           </div>
         </div>
         <div id="faq">
-          <p className="eyebrow">Section title</p>
-          <h2>FAQ</h2>
+          <p className="eyebrow">Intrebari frecvente</p>
+          <h2>Raspunsuri utile inainte de programare</h2>
           <div className="faq-list">
             {faq.map((item) => (
-              <button key={item} type="button">
-                {item}
-                <ChevronDown size={18} />
-              </button>
+              <details key={item.question}>
+                <summary>
+                  {item.question}
+                  <ChevronDown size={18} />
+                </summary>
+                <p>{item.answer}</p>
+              </details>
             ))}
           </div>
         </div>
@@ -397,48 +428,48 @@ export default function App() {
 
       <section className="section booking" id="booking">
         <div>
-          <p className="eyebrow">Section title</p>
-          <h2>Book Your Appointment</h2>
+          <p className="eyebrow">Programare</p>
+          <h2>Trimite o cerere de programare</h2>
           <div className="booking-points">
-            <span><CalendarDays size={18} /> Easy online booking</span>
-            <span><ShieldCheck size={18} /> Secure confirmation</span>
-            <span><Heart size={18} /> Personalized experience</span>
+            <span><CalendarDays size={18} /> Cerere rapida online</span>
+            <span><ShieldCheck size={18} /> Confirmare manuala</span>
+            <span><Heart size={18} /> Recomandare personalizata</span>
           </div>
         </div>
         <form onSubmit={submitBooking}>
           <label>
-            Full name
+            Nume complet
             <input name="full_name" autoComplete="name" required />
           </label>
           <label>
-            Phone number
+            Numar de telefon
             <input name="phone" autoComplete="tel" required />
           </label>
           <label>
-            Service
+            Serviciu
             <select name="service" defaultValue="" required>
-              <option value="" disabled>Select service</option>
+              <option value="" disabled>Alege serviciul</option>
               {services.map((service) => <option key={service.title}>{service.title}</option>)}
             </select>
           </label>
           <label>
-            Preferred date
+            Data preferata
             <input name="preferred_date" type="date" required />
           </label>
           <label>
-            Preferred time
+            Ora preferata
             <input name="preferred_time" type="time" />
           </label>
           <label>
-            Email / optional
+            Email optional
             <input name="email" type="email" autoComplete="email" />
           </label>
           <label className="full">
-            Additional notes
+            Detalii suplimentare
             <textarea name="message" rows="4" />
           </label>
           <label className="honeypot" aria-hidden="true">
-            Company
+            Firma
             <input name="company" tabIndex="-1" autoComplete="off" />
           </label>
           <label className="consent-field full">
@@ -451,7 +482,7 @@ export default function App() {
             Datele sunt folosite doar pentru programare. Politica de confidentialitate va fi completata inainte de lansarea publica.
           </p>
           <button type="submit" disabled={bookingStatus.state === 'loading'}>
-            {bookingStatus.state === 'loading' ? 'Sending...' : 'Book appointment'} <ArrowRight size={16} />
+            {bookingStatus.state === 'loading' ? 'Se trimite...' : 'Trimite cererea'} <ArrowRight size={16} />
           </button>
           {bookingStatus.message ? (
             <p className={`form-status form-status-${bookingStatus.state}`} role="status" aria-live="polite">
@@ -462,23 +493,23 @@ export default function App() {
       </section>
 
       <section className="section contact" id="contact">
-        <ImageSlot label="Map / area placeholder" />
+        <ImageSlot label="Harta sau zona de acces" />
         <div className="contact-card">
-          <p className="eyebrow">Section title</p>
-          <h2>Visit Us</h2>
-          <p><MapPin size={18} /> [Zona: Metrou Izvor]</p>
-          <p><Phone size={18} /> [Phone placeholder]</p>
-          <p><AtSign size={18} /> [Instagram placeholder]</p>
-          <p><Clock size={18} /> [Schedule placeholder]</p>
+          <p className="eyebrow">Contact</p>
+          <h2>Zona si detalii</h2>
+          <p><MapPin size={18} /> Zona Izvor, Bucuresti - de confirmat</p>
+          <p><Phone size={18} /> Telefon de completat</p>
+          <p><AtSign size={18} /> Instagram de completat</p>
+          <p><Clock size={18} /> Program de completat</p>
         </div>
       </section>
 
       <footer className="site-footer">
         <div>
-          <strong>[LOGO]</strong>
-          <p>[Short footer text placeholder about beauty, confidence and premium lash experiences.]</p>
+          <strong>Sorina Lash Studio</strong>
+          <p>Extensii de gene si laminare in Bucuresti, cu accent pe confort, forma potrivita si rezultat elegant.</p>
         </div>
-        <nav aria-label="Footer services">
+        <nav aria-label="Servicii in subsol">
           {services.map((service) => <a key={service.title} href="#services">{service.title}</a>)}
         </nav>
       </footer>

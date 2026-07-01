@@ -48,3 +48,22 @@ Applied decisions:
 - RLS remains enabled on `public.appointments`; no public `anon` insert policy is added.
 - Vercel can deploy Vite with build output `dist`; Functions can be added for backend work, but live deployment should wait until a separate Sorina Vercel project and separate Sorina Supabase project exist.
 - Local business structured data should wait for real name, address/area, phone, URL, opening hours, and image assets.
+
+## 2026-07-01 Romanian SEO Pass
+
+Sources checked:
+
+- Google SEO Starter Guide: https://developers.google.com/search/docs/fundamentals/seo-starter-guide
+- Google structured data intro: https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data
+- Google image SEO best practices: https://developers.google.com/search/docs/appearance/google-images
+- schema.org BeautySalon type: https://schema.org/BeautySalon
+
+Applied decisions:
+
+- Changed the document language to Romanian and rewrote visible interface copy in Romanian.
+- Added a concise Romanian title and meta description focused on extensii de gene, laminare, Bucuresti, and programare.
+- Added canonical URL, Open Graph, Twitter preview tags, robots.txt, and sitemap.xml for the current Vercel URL.
+- Added BeautySalon JSON-LD with only safe, non-invented information: name, URL, image, Bucuresti as locality, service names, and appointment action.
+- Kept prices, awards, certifications, testimonials, exact phone, exact address, and schedule as pending rather than inventing facts.
+- Moved the hero visual into a standard HTML `img` path with meaningful alt text, because Google image guidance says crawlers discover images through `img src`, not CSS backgrounds.
+- Important: Google explicitly says SEO best practices help crawling/indexing/understanding, but do not guarantee first place. Further ranking work needs real photos, real reviews, Google Business Profile, backlinks/mentions, Search Console, final domain, and complete local business details.

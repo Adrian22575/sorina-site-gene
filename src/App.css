@@ -209,6 +209,15 @@ p {
   min-height: 205px;
   overflow: hidden;
   padding: 16px;
+  position: relative;
+}
+
+.image-slot img {
+  height: 100%;
+  inset: 0;
+  object-fit: cover;
+  position: absolute;
+  width: 100%;
 }
 
 .image-slot span {
@@ -217,6 +226,8 @@ p {
   color: var(--muted);
   font-size: 12px;
   padding: 8px 12px;
+  position: relative;
+  z-index: 1;
 }
 
 .image-slot-tall {
@@ -612,19 +623,42 @@ p {
   margin-top: 28px;
 }
 
-.faq-list button {
-  align-items: center;
+.faq-list details {
   background: white;
   border: 1px solid var(--line);
   border-radius: 8px;
+  overflow: hidden;
+}
+
+.faq-list summary {
+  align-items: center;
   color: var(--soft-ink);
   cursor: pointer;
   display: flex;
   font: inherit;
+  font-weight: 800;
   justify-content: space-between;
   min-height: 58px;
   padding: 16px 18px;
   text-align: left;
+}
+
+.faq-list summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-list details[open] summary svg {
+  transform: rotate(180deg);
+}
+
+.faq-list summary svg {
+  transition: transform 180ms ease;
+}
+
+.faq-list details p {
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+  padding: 0 18px 18px;
 }
 
 .booking {
