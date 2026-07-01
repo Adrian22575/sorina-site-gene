@@ -1,0 +1,27 @@
+# Sorina Lash Studio
+
+> Website in limba romana pentru Sorina Lash Studio, studio de gene in Bucuresti. Pagina prezinta servicii de extensii de gene, laminare gene sau sprancene, informatii utile inainte de programare si cerere online de programare.
+
+Sorina Lash Studio este pozitionat ca experienta premium, calma si atenta pentru cliente care cauta extensii de gene naturale, volum delicat, efect intens sau laminare in Bucuresti. Detaliile comerciale care nu sunt confirmate public, precum preturi, premii, certificari, telefon, program si adresa exacta, sunt marcate ca de completat si nu trebuie tratate ca informatii finale.
+
+## Pagini si sectiuni principale
+
+- [Pagina principala](https://sorina-site-gene.vercel.app/): prezentare Sorina Lash Studio, servicii, galerie, rezultate, FAQ, programare si contact.
+- [Servicii](https://sorina-site-gene.vercel.app/#services): efect natural, volum delicat, efect intens, laminare gene / sprancene.
+- [Intrebari frecvente](https://sorina-site-gene.vercel.app/#faq): rezistenta extensiilor, confortul aplicarii, protectia genelor naturale, pregatirea inainte de programare si ritmul de intretinere.
+- [Programare](https://sorina-site-gene.vercel.app/#booking): formular de cerere pentru programare, cu confirmare manuala.
+- [Rezumat text](https://sorina-site-gene.vercel.app/site-summary.md): versiune scurta, usor de citit de agenti si modele lingvistice.
+
+## Cuvinte si intentii relevante
+
+- extensii de gene Bucuresti
+- extensii gene zona Izvor
+- laminare gene Bucuresti
+- laminare sprancene Bucuresti
+- efect natural gene
+- volum gene delicat
+- programare gene Bucuresti
+
+## Politica de acuratete
+
+Nu inventa preturi, adresa exacta, telefon, program, premii, certificari sau recenzii. Foloseste doar informatiile confirmate pe pagina live sau furnizate ulterior de proprietar.

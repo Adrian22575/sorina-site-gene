@@ -111,3 +111,16 @@
   - Public Open Graph image copied from the current hero asset.
 - Changed the hero visual to render as a standard HTML image with meaningful alt text.
 - Left factual business fields pending until supplied by the user/Sorina.
+
+## 2026-07-01 AI/Search Discoverability Pass
+
+- Created and followed a temporary sequential plan in `docs/TEMP_AI_SEARCH_GOALS.md`, then deleted it after verification.
+- Added static Romanian fallback content inside `index.html` so the page still exposes core content before React renders.
+- Expanded JSON-LD to an `@graph` with:
+  - `BeautySalon`
+  - `FAQPage`
+- Added public AI/search support files:
+  - `public/llms.txt`
+  - `public/site-summary.md`
+- Added `site-summary.md` to `public/sitemap.xml`.
+- Recorded the limitation that `llms.txt` is an emerging convention, not a guaranteed ranking mechanism.

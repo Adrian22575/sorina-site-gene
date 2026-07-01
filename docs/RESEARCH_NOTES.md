@@ -67,3 +67,21 @@ Applied decisions:
 - Kept prices, awards, certifications, testimonials, exact phone, exact address, and schedule as pending rather than inventing facts.
 - Moved the hero visual into a standard HTML `img` path with meaningful alt text, because Google image guidance says crawlers discover images through `img src`, not CSS backgrounds.
 - Important: Google explicitly says SEO best practices help crawling/indexing/understanding, but do not guarantee first place. Further ranking work needs real photos, real reviews, Google Business Profile, backlinks/mentions, Search Console, final domain, and complete local business details.
+
+## 2026-07-01 AI/Search Discoverability Pass
+
+Sources checked:
+
+- Google SEO Starter Guide: https://developers.google.com/search/docs/fundamentals/seo-starter-guide
+- Google structured data intro: https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data
+- Google image SEO best practices: https://developers.google.com/search/docs/appearance/google-images
+- Public discussion around `llms.txt` as an emerging convention, not a formal search ranking standard.
+
+Applied decisions:
+
+- Added static Romanian fallback content inside the initial HTML root so non-JavaScript readers still see brand, services, FAQ, programare, and contact context.
+- Added FAQPage JSON-LD that matches the visible FAQ copy.
+- Added `/llms.txt` as a concise orientation file for AI agents and language-model crawlers.
+- Added `/site-summary.md` as a plain-text Romanian summary linked from `llms.txt` and sitemap.
+- Did not add fake keyword stuffing, hidden prompt instructions, fake reviews, fake local details, or claims of guaranteed first ranking.
+- Treat `llms.txt` as a low-risk supplemental signal only. It may help some AI tools understand the site, but it has no guaranteed adoption across Google, ChatGPT, Gemini, Claude, Bing, or other AI products.

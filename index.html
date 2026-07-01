@@ -33,64 +33,162 @@
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "BeautySalon",
-        "@id": "https://sorina-site-gene.vercel.app/#studio",
-        "name": "Sorina Lash Studio",
-        "url": "https://sorina-site-gene.vercel.app/",
-        "image": "https://sorina-site-gene.vercel.app/og-sorina-lash-studio.png",
-        "description": "Studio de gene in Bucuresti pentru extensii de gene, efect natural, volum delicat, efect intens si laminare gene sau sprancene.",
-        "address": {
-          "@type": "PostalAddress",
-          "addressLocality": "Bucuresti",
-          "addressCountry": "RO"
-        },
-        "areaServed": "Bucuresti",
-        "knowsAbout": [
-          "extensii de gene",
-          "laminare gene",
-          "laminare sprancene",
-          "volum gene",
-          "efect natural gene"
-        ],
-        "makesOffer": [
+        "@graph": [
           {
-            "@type": "Offer",
-            "itemOffered": {
-              "@type": "Service",
-              "name": "Efect natural"
+            "@type": "BeautySalon",
+            "@id": "https://sorina-site-gene.vercel.app/#studio",
+            "name": "Sorina Lash Studio",
+            "url": "https://sorina-site-gene.vercel.app/",
+            "image": "https://sorina-site-gene.vercel.app/og-sorina-lash-studio.png",
+            "description": "Studio de gene in Bucuresti pentru extensii de gene, efect natural, volum delicat, efect intens si laminare gene sau sprancene.",
+            "inLanguage": "ro-RO",
+            "address": {
+              "@type": "PostalAddress",
+              "addressLocality": "Bucuresti",
+              "addressCountry": "RO"
+            },
+            "areaServed": "Bucuresti",
+            "knowsAbout": [
+              "extensii de gene",
+              "laminare gene",
+              "laminare sprancene",
+              "volum gene",
+              "efect natural gene"
+            ],
+            "makesOffer": [
+              {
+                "@type": "Offer",
+                "itemOffered": {
+                  "@type": "Service",
+                  "name": "Efect natural"
+                }
+              },
+              {
+                "@type": "Offer",
+                "itemOffered": {
+                  "@type": "Service",
+                  "name": "Volum delicat"
+                }
+              },
+              {
+                "@type": "Offer",
+                "itemOffered": {
+                  "@type": "Service",
+                  "name": "Efect intens"
+                }
+              },
+              {
+                "@type": "Offer",
+                "itemOffered": {
+                  "@type": "Service",
+                  "name": "Laminare gene / sprancene"
+                }
+              }
+            ],
+            "potentialAction": {
+              "@type": "ReserveAction",
+              "target": "https://sorina-site-gene.vercel.app/#booking"
             }
           },
           {
-            "@type": "Offer",
-            "itemOffered": {
-              "@type": "Service",
-              "name": "Volum delicat"
-            }
-          },
-          {
-            "@type": "Offer",
-            "itemOffered": {
-              "@type": "Service",
-              "name": "Efect intens"
-            }
-          },
-          {
-            "@type": "Offer",
-            "itemOffered": {
-              "@type": "Service",
-              "name": "Laminare gene / sprancene"
-            }
+            "@type": "FAQPage",
+            "@id": "https://sorina-site-gene.vercel.app/#faq",
+            "inLanguage": "ro-RO",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "Cat rezista extensiile de gene?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Rezistenta depinde de ritmul natural de crestere, tipul genelor si ingrijirea de acasa. Intervalul potrivit pentru intretinere se stabileste la consultatie."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Doare aplicarea extensiilor?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Aplicarea trebuie sa fie confortabila. Daca apare sensibilitate, se ajusteaza pozitia sau tehnica pentru ca programarea sa ramana calma."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Pot afecta genele naturale?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Extensiile sunt gandite sa respecte genele naturale atunci cand lungimea, grosimea si densitatea sunt alese corect."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Cum ma pregatesc inainte de programare?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Vino fara machiaj in zona ochilor si evita produsele uleioase inainte de aplicare. Confirmarea finala se face inainte de programare."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "La cat timp se face intretinerea?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Ritmul de intretinere se recomanda individual, dupa stilul de viata si felul in care se pastreaza extensiile."
+                }
+              }
+            ]
           }
-        ],
-        "potentialAction": {
-          "@type": "ReserveAction",
-          "target": "https://sorina-site-gene.vercel.app/#booking"
-        }
+        ]
       }
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main>
+        <header>
+          <h1>Sorina Lash Studio - extensii de gene si laminare in Bucuresti</h1>
+          <p>Studio premium de gene pentru efect natural, volum delicat, efect intens si laminare gene sau sprancene.</p>
+          <nav aria-label="Navigatie statica">
+            <a href="#services">Servicii</a>
+            <a href="#gallery">Galerie</a>
+            <a href="#results">Rezultate</a>
+            <a href="#about">Despre Sorina</a>
+            <a href="#faq">Intrebari frecvente</a>
+            <a href="#booking">Programare</a>
+            <a href="#contact">Contact</a>
+          </nav>
+        </header>
+        <section id="services">
+          <h2>Servicii pentru gene</h2>
+          <ul>
+            <li>Efect natural - gene fine, aerisite, pentru un rezultat discret si elegant.</li>
+            <li>Volum delicat - volum fin, privire luminoasa si linie rafinata.</li>
+            <li>Efect intens - efect vizibil, construit cu atentie dupa forma ochilor.</li>
+            <li>Laminare gene / sprancene - definire si aranjare pentru gene sau sprancene naturale.</li>
+          </ul>
+        </section>
+        <section id="about">
+          <h2>Despre Sorina</h2>
+          <p>Fiecare set este gandit dupa forma ochilor, stilul clientei si confortul genelor naturale. Detaliile despre experienta, premii si certificari vor fi completate doar dupa confirmare.</p>
+        </section>
+        <section id="faq">
+          <h2>Intrebari frecvente despre extensii de gene</h2>
+          <h3>Cat rezista extensiile de gene?</h3>
+          <p>Rezistenta depinde de ritmul natural de crestere, tipul genelor si ingrijirea de acasa.</p>
+          <h3>Doare aplicarea extensiilor?</h3>
+          <p>Aplicarea trebuie sa fie confortabila, iar tehnica se ajusteaza daca apare sensibilitate.</p>
+          <h3>Pot afecta genele naturale?</h3>
+          <p>Extensiile sunt gandite sa respecte genele naturale atunci cand lungimea, grosimea si densitatea sunt alese corect.</p>
+        </section>
+        <section id="booking">
+          <h2>Programare</h2>
+          <p>Trimite o cerere de programare online pentru confirmare manuala. Datele sunt folosite doar pentru contactarea si confirmarea programarii.</p>
+        </section>
+        <section id="contact">
+          <h2>Contact</h2>
+          <p>Zona Izvor, Bucuresti - detaliile finale despre telefon, Instagram, program si adresa se completeaza dupa confirmare.</p>
+        </section>
+      </main>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
