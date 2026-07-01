@@ -124,3 +124,27 @@
   - `public/site-summary.md`
 - Added `site-summary.md` to `public/sitemap.xml`.
 - Recorded the limitation that `llms.txt` is an emerging convention, not a guaranteed ranking mechanism.
+
+## 2026-07-01 Owner Admin Services Pass
+
+- Created and followed a temporary sequential plan in `docs/TEMP_OWNER_ADMIN_GOALS.md`, then deleted it after verification.
+- Researched Supabase RLS/API key guidance, Vercel env vars, and admin/dashboard UX guidance.
+- Added migration `202607010002_create_site_services.sql`:
+  - Creates `public.site_services`.
+  - Enables RLS.
+  - Seeds the current Romanian service placeholders.
+- Applied the services migration to the dedicated Sorina Supabase project `yjhkdmbdilzuwhwluico`.
+- Fixed the `set_updated_at` function search path after Supabase security advisor flagged it.
+- Verified `site_services` rows exist and RLS is enabled.
+- Supabase security advisor now reports only informational `RLS Enabled No Policy` items for `appointments` and `site_services`, which is intentional for server-side-only access.
+- Added `/api/content` for public active-service reads with static fallback.
+- Added `/api/admin/services` for protected service CRUD using server-side Supabase service role access.
+- Updated `/api/appointments` so allowed booking services come from active database services when configured.
+- Added `/admin` React interface for owner service management:
+  - Login with `ADMIN_PASSWORD`.
+  - Add service.
+  - Edit title, duration, displayed price label, order, description, and visibility.
+  - Save and delete.
+- Added Vercel rewrite for `/admin`.
+- Updated `.env.example` and `docs/DEPLOYMENT.md` with `ADMIN_PASSWORD`.
+- Out of scope for this pass: gallery uploads, contact settings, promo editor, review editor, and FAQ editor.

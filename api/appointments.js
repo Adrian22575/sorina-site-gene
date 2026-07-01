@@ -1,10 +1,10 @@
 const allowedMethods = ['POST']
-const allowedServices = new Set([
+const fallbackServices = [
   'Efect natural',
   'Volum delicat',
   'Efect intens',
   'Laminare gene / sprancene',
-])
+]
 
 function sendJson(response, status, payload) {
   response.statusCode = status
@@ -24,6 +24,27 @@ function isValidDate(value) {
 
 function isValidTime(value) {
   return value === '' || /^\d{2}:\d{2}$/.test(value)
+}
+
+async function getAllowedServices(supabaseUrl, serviceRoleKey) {
+  const endpoint = new URL(`${supabaseUrl.replace(/\/$/, '')}/rest/v1/site_services`)
+  endpoint.searchParams.set('select', 'title')
+  endpoint.searchParams.set('is_active', 'eq.true')
+  endpoint.searchParams.set('order', 'sort_order.asc,title.asc')
+
+  const supabaseResponse = await fetch(endpoint, {
+    headers: {
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+    },
+  })
+
+  if (!supabaseResponse.ok) {
+    return new Set(fallbackServices)
+  }
+
+  const rows = await supabaseResponse.json()
+  return new Set(rows.length ? rows.map((row) => row.title) : fallbackServices)
 }
 
 export default async function handler(request, response) {
@@ -73,6 +94,7 @@ export default async function handler(request, response) {
     return sendJson(response, 400, { error: 'Completeaza numele, telefonul, serviciul si data preferata.' })
   }
 
+  const allowedServices = await getAllowedServices(supabaseUrl, serviceRoleKey)
   if (!allowedServices.has(appointment.service)) {
     return sendJson(response, 400, { error: 'Serviciul ales nu este valid.' })
   }

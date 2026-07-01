@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   ArrowRight,
@@ -9,16 +9,21 @@ import {
   Clock,
   Gift,
   Heart,
+  LogOut,
   MapPin,
   Phone,
+  Plus,
+  RefreshCcw,
+  Save,
   ShieldCheck,
   Sparkles,
   Star,
+  Trash2,
 } from 'lucide-react'
 import heroImage from './assets/hero.png'
 import './App.css'
 
-const services = [
+const defaultServices = [
   {
     title: 'Efect natural',
     duration: '60 min',
@@ -96,6 +101,18 @@ function slugify(value) {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
+}
+
+function normalizeService(service) {
+  return {
+    id: service.id || null,
+    title: service.title || '',
+    duration: service.duration || '',
+    price: service.price || service.price_label || 'Pret de completat',
+    note: service.note || '',
+    sort_order: Number.isFinite(Number(service.sort_order)) ? Number(service.sort_order) : 0,
+    is_active: service.is_active !== false && service.isActive !== false,
+  }
 }
 
 function Button({ children, href = '#booking', tone = 'dark' }) {
@@ -190,8 +207,299 @@ function BeforeAfterCard({ item }) {
   )
 }
 
-export default function App() {
+function AdminApp() {
+  const [password, setPassword] = useState(() => window.sessionStorage.getItem('sorina_admin_password') || '')
+  const [draftPassword, setDraftPassword] = useState('')
+  const [services, setServices] = useState([])
+  const [status, setStatus] = useState({ state: 'idle', message: '' })
+  const isLoggedIn = Boolean(password)
+
+  async function adminRequest(path, options = {}) {
+    const response = await fetch(path, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-password': password,
+        ...options.headers,
+      },
+    })
+    const data = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Actiunea nu a putut fi finalizata.')
+    }
+
+    return data
+  }
+
+  async function loadServices() {
+    if (!password) return
+    setStatus({ state: 'loading', message: 'Se incarca serviciile...' })
+
+    try {
+      const data = await adminRequest('/api/admin/services')
+      setServices(data.services.map(normalizeService))
+      setStatus({ state: 'success', message: 'Serviciile sunt actualizate.' })
+    } catch (error) {
+      setStatus({ state: 'error', message: error.message })
+    }
+  }
+
+  useEffect(() => {
+    if (!password) return undefined
+    let isMounted = true
+
+    async function loadInitialServices() {
+      setStatus({ state: 'loading', message: 'Se incarca serviciile...' })
+
+      try {
+        const response = await fetch('/api/admin/services', {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-password': password,
+          },
+        })
+        const data = await response.json().catch(() => ({}))
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Serviciile nu au putut fi incarcate.')
+        }
+
+        if (isMounted) {
+          setServices(data.services.map(normalizeService))
+          setStatus({ state: 'success', message: 'Serviciile sunt actualizate.' })
+        }
+      } catch (error) {
+        if (isMounted) setStatus({ state: 'error', message: error.message })
+      }
+    }
+
+    loadInitialServices()
+    return () => {
+      isMounted = false
+    }
+  }, [password])
+
+  function login(event) {
+    event.preventDefault()
+    const nextPassword = draftPassword.trim()
+    window.sessionStorage.setItem('sorina_admin_password', nextPassword)
+    setPassword(nextPassword)
+    setDraftPassword('')
+  }
+
+  function logout() {
+    window.sessionStorage.removeItem('sorina_admin_password')
+    setPassword('')
+    setServices([])
+    setStatus({ state: 'idle', message: '' })
+  }
+
+  function updateService(index, field, value) {
+    setServices((current) => current.map((service, itemIndex) => (
+      itemIndex === index ? { ...service, [field]: value } : service
+    )))
+  }
+
+  function addService() {
+    setServices((current) => [
+      ...current,
+      {
+        id: null,
+        title: '',
+        duration: '',
+        price: 'Pret de completat',
+        note: '',
+        sort_order: current.length ? current.length * 10 + 10 : 10,
+        is_active: true,
+      },
+    ])
+  }
+
+  async function saveService(index) {
+    const service = services[index]
+    setStatus({ state: 'loading', message: 'Se salveaza serviciul...' })
+
+    try {
+      const payload = {
+        title: service.title,
+        duration: service.duration,
+        price: service.price,
+        note: service.note,
+        sort_order: service.sort_order,
+        is_active: service.is_active,
+      }
+      const data = await adminRequest(
+        service.id ? `/api/admin/services?id=${encodeURIComponent(service.id)}` : '/api/admin/services',
+        {
+          method: service.id ? 'PATCH' : 'POST',
+          body: JSON.stringify(payload),
+        },
+      )
+      const saved = normalizeService(data.service)
+      setServices((current) => current.map((item, itemIndex) => (itemIndex === index ? saved : item)))
+      setStatus({ state: 'success', message: 'Serviciul a fost salvat.' })
+    } catch (error) {
+      setStatus({ state: 'error', message: error.message })
+    }
+  }
+
+  async function deleteService(index) {
+    const service = services[index]
+
+    if (!service.id) {
+      setServices((current) => current.filter((_, itemIndex) => itemIndex !== index))
+      return
+    }
+
+    if (!window.confirm(`Stergi serviciul "${service.title}"?`)) return
+
+    setStatus({ state: 'loading', message: 'Se sterge serviciul...' })
+    try {
+      await adminRequest(`/api/admin/services?id=${encodeURIComponent(service.id)}`, { method: 'DELETE' })
+      setServices((current) => current.filter((_, itemIndex) => itemIndex !== index))
+      setStatus({ state: 'success', message: 'Serviciul a fost sters.' })
+    } catch (error) {
+      setStatus({ state: 'error', message: error.message })
+    }
+  }
+
+  if (!isLoggedIn) {
+    return (
+      <main className="admin-shell">
+        <section className="admin-login">
+          <p className="eyebrow">Administrare</p>
+          <h1>Sorina - Panou servicii</h1>
+          <p>Introdu parola de admin pentru a modifica serviciile afisate pe site si in formularul de programare.</p>
+          <form onSubmit={login}>
+            <label className="full">
+              Parola admin
+              <input
+                type="password"
+                value={draftPassword}
+                onChange={(event) => setDraftPassword(event.target.value)}
+                required
+              />
+            </label>
+            <button type="submit">
+              Intra in admin <ArrowRight size={16} />
+            </button>
+          </form>
+        </section>
+      </main>
+    )
+  }
+
+  return (
+    <main className="admin-shell">
+      <header className="admin-header">
+        <div>
+          <p className="eyebrow">Administrare</p>
+          <h1>Servicii editabile</h1>
+          <p>Modificarile salvate aici devin sursa pentru sectiunea de servicii si formularul de programare.</p>
+        </div>
+        <div className="admin-actions">
+          <button type="button" onClick={loadServices}>
+            <RefreshCcw size={16} /> Reincarca
+          </button>
+          <button type="button" onClick={logout}>
+            <LogOut size={16} /> Iesi
+          </button>
+        </div>
+      </header>
+
+      <section className="admin-panel">
+        <div className="admin-panel-header">
+          <h2>Lista servicii</h2>
+          <button type="button" onClick={addService}>
+            <Plus size={16} /> Adauga serviciu
+          </button>
+        </div>
+
+        {status.message ? (
+          <p className={`form-status form-status-${status.state}`} role="status" aria-live="polite">
+            {status.message}
+          </p>
+        ) : null}
+
+        <div className="admin-service-list">
+          {services.map((service, index) => (
+            <article className="admin-service" key={service.id || `new-${index}`}>
+              <div className="admin-service-grid">
+                <label>
+                  Nume serviciu
+                  <input value={service.title} onChange={(event) => updateService(index, 'title', event.target.value)} />
+                </label>
+                <label>
+                  Durata
+                  <input value={service.duration} onChange={(event) => updateService(index, 'duration', event.target.value)} />
+                </label>
+                <label>
+                  Pret afisat
+                  <input value={service.price} onChange={(event) => updateService(index, 'price', event.target.value)} />
+                </label>
+                <label>
+                  Ordine
+                  <input
+                    type="number"
+                    value={service.sort_order}
+                    onChange={(event) => updateService(index, 'sort_order', Number(event.target.value))}
+                  />
+                </label>
+                <label className="full">
+                  Descriere
+                  <textarea value={service.note} rows="3" onChange={(event) => updateService(index, 'note', event.target.value)} />
+                </label>
+                <label className="admin-check full">
+                  <input
+                    type="checkbox"
+                    checked={service.is_active}
+                    onChange={(event) => updateService(index, 'is_active', event.target.checked)}
+                  />
+                  <span>Serviciu vizibil pe site</span>
+                </label>
+              </div>
+              <div className="admin-row-actions">
+                <button type="button" onClick={() => saveService(index)}>
+                  <Save size={16} /> Salveaza
+                </button>
+                <button type="button" className="admin-danger" onClick={() => deleteService(index)}>
+                  <Trash2 size={16} /> Sterge
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    </main>
+  )
+}
+
+function PublicApp() {
+  const [serviceList, setServiceList] = useState(defaultServices)
   const [bookingStatus, setBookingStatus] = useState({ state: 'idle', message: '' })
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadContent() {
+      try {
+        const response = await fetch('/api/content')
+        const data = await response.json()
+
+        if (isMounted && Array.isArray(data.services) && data.services.length) {
+          setServiceList(data.services.map(normalizeService))
+        }
+      } catch {
+        if (isMounted) setServiceList(defaultServices)
+      }
+    }
+
+    loadContent()
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   async function submitBooking(event) {
     event.preventDefault()
@@ -331,7 +639,7 @@ export default function App() {
           Servicii premium pentru efecte naturale, delicate sau intense, adaptate la privirea ta.
         </SectionIntro>
         <div className="service-grid">
-          {services.map((service) => (
+          {serviceList.map((service) => (
             <ServiceCard key={service.title} service={service} />
           ))}
         </div>
@@ -449,7 +757,7 @@ export default function App() {
             Serviciu
             <select name="service" defaultValue="" required>
               <option value="" disabled>Alege serviciul</option>
-              {services.map((service) => <option key={service.title}>{service.title}</option>)}
+              {serviceList.map((service) => <option key={service.title}>{service.title}</option>)}
             </select>
           </label>
           <label>
@@ -510,9 +818,13 @@ export default function App() {
           <p>Extensii de gene si laminare in Bucuresti, cu accent pe confort, forma potrivita si rezultat elegant.</p>
         </div>
         <nav aria-label="Servicii in subsol">
-          {services.map((service) => <a key={service.title} href="#services">{service.title}</a>)}
+          {serviceList.map((service) => <a key={service.title} href="#services">{service.title}</a>)}
         </nav>
       </footer>
     </main>
   )
+}
+
+export default function App() {
+  return window.location.pathname === '/admin' ? <AdminApp /> : <PublicApp />
 }

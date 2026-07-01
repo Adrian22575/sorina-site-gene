@@ -85,3 +85,21 @@ Applied decisions:
 - Added `/site-summary.md` as a plain-text Romanian summary linked from `llms.txt` and sitemap.
 - Did not add fake keyword stuffing, hidden prompt instructions, fake reviews, fake local details, or claims of guaranteed first ranking.
 - Treat `llms.txt` as a low-risk supplemental signal only. It may help some AI tools understand the site, but it has no guaranteed adoption across Google, ChatGPT, Gemini, Claude, Bing, or other AI products.
+
+## 2026-07-01 Owner Admin Pass
+
+Sources checked:
+
+- Supabase Row Level Security docs: https://supabase.com/docs/guides/database/postgres/row-level-security
+- Supabase API keys docs: https://supabase.com/docs/guides/getting-started/api-keys
+- Vercel Environment Variables docs: https://vercel.com/docs/environment-variables
+- Nielsen Norman Group dashboard guidance: https://www.nngroup.com/articles/dashboards-preattentive/
+
+Applied decisions:
+
+- Start with services because they affect both the public section and the booking form.
+- Keep direct database access server-side. The public website calls `/api/content`; the admin calls `/api/admin/services`.
+- Keep RLS enabled on `public.site_services` and avoid public table policies for this pass.
+- Protect `/api/admin/services` with `ADMIN_PASSWORD` stored in env, not in source control.
+- Keep the owner interface narrow: list, edit fields, visibility toggle, save, delete, reload.
+- Do not add gallery uploads, reviews, promotions, FAQ editing, or a full CMS until the services flow proves useful.
