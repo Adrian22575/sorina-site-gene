@@ -35,7 +35,7 @@
 .site-header nav a {
   color: var(--soft-ink);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0;
 }
 
@@ -44,7 +44,7 @@
   border-radius: 999px;
   display: inline-flex;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
   gap: 8px;
   justify-content: center;
   min-height: 46px;
@@ -108,7 +108,7 @@
 .eyebrow {
   color: var(--wine);
   font-size: 12px;
-  font-weight: 900;
+  font-weight: 600;
   letter-spacing: 0;
   margin: 0 0 14px;
   text-transform: uppercase;
@@ -273,7 +273,7 @@ p {
 .proof-item span {
   color: var(--soft-ink);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0;
   text-transform: uppercase;
 }
@@ -365,7 +365,7 @@ p {
 .learn-more {
   color: var(--wine);
   font-size: 12px;
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: 0;
   text-transform: uppercase;
 }
@@ -452,7 +452,7 @@ p {
   border-radius: 999px;
   color: white;
   font-size: 11px;
-  font-weight: 900;
+  font-weight: 700;
   padding: 7px 11px;
   position: absolute;
   text-transform: uppercase;
@@ -613,7 +613,7 @@ p {
 .review-card strong {
   color: var(--wine);
   font-size: 12px;
-  font-weight: 900;
+  font-weight: 600;
   text-transform: uppercase;
 }
 
@@ -636,7 +636,7 @@ p {
   cursor: pointer;
   display: flex;
   font: inherit;
-  font-weight: 800;
+  font-weight: 600;
   justify-content: space-between;
   min-height: 58px;
   padding: 16px 18px;
@@ -683,7 +683,7 @@ label {
   color: var(--soft-ink);
   display: grid;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
   gap: 8px;
 }
 
@@ -747,7 +747,7 @@ form button {
   display: inline-flex;
   font: inherit;
   font-size: 13px;
-  font-weight: 900;
+  font-weight: 700;
   gap: 8px;
   justify-content: center;
   min-height: 48px;
