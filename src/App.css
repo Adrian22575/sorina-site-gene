@@ -855,6 +855,24 @@ form button:disabled {
   max-width: 680px;
 }
 
+.admin-jump-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.admin-jump-nav a {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--wine);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 12px;
+  text-decoration: none;
+}
+
 .admin-actions,
 .admin-panel-header,
 .admin-row-actions {
@@ -871,7 +889,13 @@ form button:disabled {
   background: white;
   border: 1px solid var(--line);
   border-radius: 8px;
+  margin-bottom: 24px;
   padding: 24px;
+}
+
+.admin-global-status {
+  margin: 0 auto 18px;
+  max-width: 1120px;
 }
 
 .admin-panel-header {
@@ -948,6 +972,21 @@ form button:disabled {
 
 .admin-row-actions {
   justify-content: flex-end;
+}
+
+.admin-preview {
+  background: #fbf8f4;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  max-width: 340px;
+  overflow: hidden;
+}
+
+.admin-preview img {
+  aspect-ratio: 4 / 3;
+  display: block;
+  object-fit: cover;
+  width: 100%;
 }
 
 @media (hover: none) {

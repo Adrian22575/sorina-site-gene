@@ -103,3 +103,20 @@ Applied decisions:
 - Protect `/api/admin/services` with `ADMIN_PASSWORD` stored in env, not in source control.
 - Keep the owner interface narrow: list, edit fields, visibility toggle, save, delete, reload.
 - Do not add gallery uploads, reviews, promotions, FAQ editing, or a full CMS until the services flow proves useful.
+
+## 2026-07-01 Owner Admin Expansion
+
+Sources checked:
+
+- Supabase changelog index: https://supabase.com/changelog.md
+- Supabase Row Level Security docs: https://supabase.com/docs/guides/database/postgres/row-level-security
+- Vercel Environment Variables docs: https://vercel.com/docs/environment-variables
+
+Applied decisions:
+
+- Extend the same admin model instead of adding a separate CMS.
+- Keep content access server-side through Vercel API routes and keep RLS enabled on every public-schema table.
+- Use `site_settings` for contact/program because there is one editable contact block.
+- Use separate tables for gallery, reviews, promotions, and FAQ so each section can be ordered, hidden, edited, or deleted independently.
+- Store gallery uploads in a dedicated public Supabase Storage bucket named `site-gallery`; uploads are accepted only through the protected admin API.
+- Keep all visible fallback copy in Romanian and avoid inventing real contact details, reviews, prices, or claims.

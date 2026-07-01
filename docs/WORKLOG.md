@@ -148,3 +148,30 @@
 - Added Vercel rewrite for `/admin`.
 - Updated `.env.example` and `docs/DEPLOYMENT.md` with `ADMIN_PASSWORD`.
 - Out of scope for this pass: gallery uploads, contact settings, promo editor, review editor, and FAQ editor.
+
+## 2026-07-01 Owner Admin Expansion Pass
+
+- Added `ADMIN_PASSWORD` to the dedicated Sorina Vercel project environments.
+- Added migration `202607010004_create_editable_site_content.sql`:
+  - Creates `public.site_settings`.
+  - Creates `public.site_gallery`.
+  - Creates `public.site_reviews`.
+  - Creates `public.site_promotions`.
+  - Creates `public.site_faqs`.
+  - Enables RLS on each new content table.
+  - Seeds Romanian placeholders.
+  - Creates public Supabase Storage bucket `site-gallery` for owner gallery images.
+- Applied the migration to the dedicated Sorina Supabase project `yjhkdmbdilzuwhwluico`.
+- Verified new table row counts and RLS status.
+- Ran Supabase security and performance advisors; only expected INFO notices remain for server-side-only RLS tables and unused new appointment indexes.
+- Added shared API content helpers in `api/_site-content.js`.
+- Expanded `/api/content` so the public site receives services, contact, gallery, reviews, promotions, and FAQ.
+- Added `/api/admin/content` for protected owner edits.
+- Expanded `/admin`:
+  - Services remain editable.
+  - Contact/program fields are editable.
+  - Gallery supports URL or image upload under 4 MB.
+  - Reviews are editable.
+  - Promotions are editable.
+  - FAQ entries are editable.
+- Connected the public site to the new editable content collections.

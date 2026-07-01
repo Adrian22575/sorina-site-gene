@@ -1,3 +1,10 @@
+import {
+  fallbackContent,
+  getSupabaseConfig,
+  listSiteContent,
+  sendJson,
+} from './_site-content.js'
+
 const fallbackServices = [
   {
     title: 'Efect natural',
@@ -25,13 +32,6 @@ const fallbackServices = [
   },
 ]
 
-function sendJson(response, status, payload) {
-  response.statusCode = status
-  response.setHeader('Content-Type', 'application/json')
-  response.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300')
-  response.end(JSON.stringify(payload))
-}
-
 function mapService(row) {
   return {
     id: row.id,
@@ -40,6 +40,34 @@ function mapService(row) {
     price: row.price_label,
     note: row.note,
     isActive: row.is_active,
+    sort_order: row.sort_order,
+  }
+}
+
+async function listServices(config) {
+  const endpoint = new URL(`${config.baseUrl}/rest/v1/site_services`)
+  endpoint.searchParams.set('select', 'id,title,duration,price_label,note,is_active,sort_order')
+  endpoint.searchParams.set('is_active', 'eq.true')
+  endpoint.searchParams.set('order', 'sort_order.asc,title.asc')
+
+  const supabaseResponse = await fetch(endpoint, {
+    headers: {
+      apikey: config.serviceRoleKey,
+      Authorization: `Bearer ${config.serviceRoleKey}`,
+    },
+  })
+
+  if (!supabaseResponse.ok) throw new Error('Serviciile nu au putut fi citite.')
+
+  const rows = await supabaseResponse.json()
+  return rows.length ? rows.map(mapService) : fallbackServices
+}
+
+function fallbackPayload() {
+  return {
+    services: fallbackServices,
+    ...fallbackContent,
+    source: 'fallback',
   }
 }
 
@@ -49,32 +77,27 @@ export default async function handler(request, response) {
     return sendJson(response, 405, { error: 'Metoda nu este permisa.' })
   }
 
-  const supabaseUrl = process.env.SUPABASE_URL
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    return sendJson(response, 200, { services: fallbackServices, source: 'fallback' })
+  const config = getSupabaseConfig()
+  if (!config) {
+    return sendJson(response, 200, fallbackPayload(), 's-maxage=60, stale-while-revalidate=300')
   }
 
-  const endpoint = new URL(`${supabaseUrl.replace(/\/$/, '')}/rest/v1/site_services`)
-  endpoint.searchParams.set('select', 'id,title,duration,price_label,note,is_active,sort_order')
-  endpoint.searchParams.set('is_active', 'eq.true')
-  endpoint.searchParams.set('order', 'sort_order.asc,title.asc')
+  try {
+    const [services, content] = await Promise.all([
+      listServices(config),
+      listSiteContent(config, true),
+    ])
 
-  const supabaseResponse = await fetch(endpoint, {
-    headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
-    },
-  })
-
-  if (!supabaseResponse.ok) {
-    return sendJson(response, 200, { services: fallbackServices, source: 'fallback' })
+    return sendJson(response, 200, {
+      services,
+      settings: { ...fallbackContent.settings, ...content.settings },
+      gallery: content.gallery.length ? content.gallery : fallbackContent.gallery,
+      reviews: content.reviews.length ? content.reviews : fallbackContent.reviews,
+      promotions: content.promotions.length ? content.promotions : fallbackContent.promotions,
+      faqs: content.faqs.length ? content.faqs : fallbackContent.faqs,
+      source: 'database',
+    }, 's-maxage=60, stale-while-revalidate=300')
+  } catch {
+    return sendJson(response, 200, fallbackPayload(), 's-maxage=60, stale-while-revalidate=300')
   }
-
-  const rows = await supabaseResponse.json()
-  return sendJson(response, 200, {
-    services: rows.length ? rows.map(mapService) : fallbackServices,
-    source: rows.length ? 'database' : 'fallback',
-  })
 }

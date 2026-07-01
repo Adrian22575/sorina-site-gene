@@ -8,7 +8,9 @@ Date: 2026-07-01
 - Booking endpoint: `api/appointments.js`, a Vercel Serverless Function.
 - Public content endpoint: `api/content.js`, used for active editable services.
 - Admin services endpoint: `api/admin/services.js`, protected by `ADMIN_PASSWORD`.
-- Database: Supabase tables `public.appointments` and `public.site_services`.
+- Admin content endpoint: `api/admin/content.js`, protected by `ADMIN_PASSWORD`.
+- Database: Supabase tables `public.appointments`, `public.site_services`, `public.site_settings`, `public.site_gallery`, `public.site_reviews`, `public.site_promotions`, and `public.site_faqs`.
+- Storage: Supabase public bucket `site-gallery` for owner-uploaded gallery images.
 - Secret handling: `SUPABASE_SERVICE_ROLE_KEY` is server-only and must be stored in Vercel environment variables. Do not expose it in `VITE_` or `NEXT_PUBLIC_` variables.
 
 ## Current Link Status
@@ -43,11 +45,14 @@ Migration file:
 supabase/migrations/202607010001_create_appointments.sql
 supabase/migrations/202607010002_create_site_services.sql
 supabase/migrations/202607010003_fix_site_services_updated_at_search_path.sql
+supabase/migrations/202607010004_create_editable_site_content.sql
 ```
 
 The appointment migration creates `public.appointments`, enables RLS, revokes `anon` and `authenticated` access, and expects inserts to go through the Vercel API using the server-side service role key.
 
 The services migration creates `public.site_services`, enables RLS, and seeds the current Romanian service placeholders. Public reads and admin writes go through Vercel API routes using the server-side service role key.
+
+The editable content migration creates settings, gallery, reviews, promotions, FAQ tables, and the `site-gallery` storage bucket. These tables also keep RLS enabled and are accessed only through Vercel API routes.
 
 ## Project Separation Rule
 
@@ -65,8 +70,9 @@ Do not link or deploy this repository to that project. The Sorina site needs its
 2. Copy the Sorina Supabase service role key into the Sorina Vercel project as `SUPABASE_SERVICE_ROLE_KEY`.
 3. Add a strong private password as `ADMIN_PASSWORD`.
 4. Deploy after env vars are present, or let Git integration deploy automatically after push.
-5. Test `/admin`, edit a service, and confirm `public.site_services` updates.
-6. Test the booking form and confirm a row appears in the Sorina `public.appointments` table.
+5. Test `/admin`, edit a service, contact field, gallery image, review, promotion, and FAQ item.
+6. Confirm `public.site_services`, `public.site_settings`, `public.site_gallery`, `public.site_reviews`, `public.site_promotions`, and `public.site_faqs` update in Supabase.
+7. Test the booking form and confirm a row appears in the Sorina `public.appointments` table.
 
 ## CLI Notes
 
@@ -91,6 +97,7 @@ Do not use `--project facultate` and do not run `vercel link` if the CLI propose
 - `/api/appointments` returns `200` after env vars and Supabase table are configured.
 - `/api/content` returns fallback services if env vars are missing.
 - `/admin` loads the owner panel after `ADMIN_PASSWORD` is configured.
+- Gallery upload accepts JPG, PNG, and WEBP images under 4 MB.
 - Supabase table has RLS enabled and no public insert policy.
 
 ## Supabase Verification
@@ -100,12 +107,17 @@ Completed on 2026-07-01:
 - Migration `create_appointments` applied to `yjhkdmbdilzuwhwluico`.
 - Migration `create_site_services` applied to `yjhkdmbdilzuwhwluico`.
 - Migration `fix_site_services_updated_at_search_path` applied to `yjhkdmbdilzuwhwluico`.
+- Migration `create_editable_site_content` applied to `yjhkdmbdilzuwhwluico`.
 - `public.appointments` exists.
 - `public.site_services` exists and contains the current Romanian service placeholders.
+- Editable content tables exist and contain Romanian placeholders.
+- Storage bucket `site-gallery` exists, is public, and accepts JPG/PNG/WEBP files up to 4 MB.
 - RLS is enabled on `public.appointments`.
 - RLS is enabled on `public.site_services`.
+- RLS is enabled on editable content tables.
 - `pg_policies` for `public.appointments` returns no public policies.
-- Supabase security advisor only reports `RLS Enabled No Policy` as INFO for `appointments` and `site_services`; this is intentional because API routes use server-side service role access.
+- Supabase security advisor only reports `RLS Enabled No Policy` as INFO for server-side-only content tables; this is intentional because API routes use server-side service role access.
+- Supabase performance advisor only reports unused appointment indexes as INFO while the project is new.
 - Project URL is `https://yjhkdmbdilzuwhwluico.supabase.co`.
 
 Still needed:
