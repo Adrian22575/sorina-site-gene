@@ -118,7 +118,24 @@ export function getSupabaseConfig() {
   return {
     baseUrl: supabaseUrl.replace(/\/$/, ''),
     serviceRoleKey,
+    keyRole: readJwtRole(serviceRoleKey),
   }
+}
+
+export function readJwtRole(key) {
+  const parts = key.split('.')
+  if (parts.length < 2) return ''
+
+  try {
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'))
+    return typeof payload.role === 'string' ? payload.role : ''
+  } catch {
+    return ''
+  }
+}
+
+export function hasServiceRoleAccess(config) {
+  return Boolean(config && (!config.keyRole || config.keyRole === 'service_role'))
 }
 
 export async function readBody(request) {

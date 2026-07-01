@@ -175,3 +175,5 @@
   - Promotions are editable.
   - FAQ entries are editable.
 - Connected the public site to the new editable content collections.
+- Live verification showed Vercel points to the correct Supabase URL, but the stored `SUPABASE_SERVICE_ROLE_KEY` does not behave like a service role key under RLS.
+- Added runtime guards so admin and booking endpoints report an explicit service role key configuration error instead of returning empty content.

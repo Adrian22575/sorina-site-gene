@@ -124,3 +124,4 @@ Still needed:
 
 - Add `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `ADMIN_PASSWORD` to the dedicated Vercel project `sorina-site-gene`.
 - The service role key is secret and should be copied from the Supabase dashboard; do not commit it.
+- If `/admin` reports that `SUPABASE_SERVICE_ROLE_KEY` is not a valid `service_role` key, replace the Vercel value with the real Supabase service role/secret key, then redeploy.

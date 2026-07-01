@@ -26,6 +26,18 @@ function isValidTime(value) {
   return value === '' || /^\d{2}:\d{2}$/.test(value)
 }
 
+function readJwtRole(key) {
+  const parts = key.split('.')
+  if (parts.length < 2) return ''
+
+  try {
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'))
+    return typeof payload.role === 'string' ? payload.role : ''
+  } catch {
+    return ''
+  }
+}
+
 async function getAllowedServices(supabaseUrl, serviceRoleKey) {
   const endpoint = new URL(`${supabaseUrl.replace(/\/$/, '')}/rest/v1/site_services`)
   endpoint.searchParams.set('select', 'title')
@@ -57,6 +69,11 @@ export default async function handler(request, response) {
 
   if (!supabaseUrl || !serviceRoleKey) {
     return sendJson(response, 503, { error: 'Programarile nu sunt configurate inca.' })
+  }
+
+  const keyRole = readJwtRole(serviceRoleKey)
+  if (keyRole && keyRole !== 'service_role') {
+    return sendJson(response, 503, { error: 'Programarile nu sunt configurate cu o cheie service_role valida.' })
   }
 
   let body = {}

@@ -1,6 +1,7 @@
 import {
   fallbackContent,
   getSupabaseConfig,
+  hasServiceRoleAccess,
   listSiteContent,
   sendJson,
 } from './_site-content.js'
@@ -78,7 +79,7 @@ export default async function handler(request, response) {
   }
 
   const config = getSupabaseConfig()
-  if (!config) {
+  if (!config || !hasServiceRoleAccess(config)) {
     return sendJson(response, 200, fallbackPayload(), 's-maxage=60, stale-while-revalidate=300')
   }
 

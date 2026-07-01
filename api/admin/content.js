@@ -4,6 +4,7 @@ import {
   collectionConfig,
   contactPayload,
   getSupabaseConfig,
+  hasServiceRoleAccess,
   itemPayload,
   listSiteContent,
   readBody,
@@ -122,6 +123,9 @@ export default async function handler(request, response) {
 
   const config = getSupabaseConfig()
   if (!config) return sendJson(response, 503, { error: 'Supabase nu este configurat pentru admin.' })
+  if (!hasServiceRoleAccess(config)) {
+    return sendJson(response, 503, { error: 'SUPABASE_SERVICE_ROLE_KEY nu este o cheie service_role valida.' })
+  }
 
   try {
     if (request.method === 'GET') {

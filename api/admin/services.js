@@ -34,6 +34,18 @@ function isAuthorized(request) {
   return Boolean(expected && received && safeEqual(received, expected))
 }
 
+function readJwtRole(key) {
+  const parts = key.split('.')
+  if (parts.length < 2) return ''
+
+  try {
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'))
+    return typeof payload.role === 'string' ? payload.role : ''
+  } catch {
+    return ''
+  }
+}
+
 function getSupabaseConfig() {
   const supabaseUrl = process.env.SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -116,6 +128,11 @@ export default async function handler(request, response) {
   const config = getSupabaseConfig()
   if (!config) {
     return sendJson(response, 503, { error: 'Supabase nu este configurat pentru admin.' })
+  }
+
+  const keyRole = readJwtRole(config.serviceRoleKey)
+  if (keyRole && keyRole !== 'service_role') {
+    return sendJson(response, 503, { error: 'SUPABASE_SERVICE_ROLE_KEY nu este o cheie service_role valida.' })
   }
 
   try {
