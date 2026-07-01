@@ -1,6 +1,6 @@
-# Sorina Lash Studio - rezumat pentru cautare si agenti AI
+# Sorina - Studio de Gene - rezumat pentru cautare si agenti AI
 
-Sorina Lash Studio este un website in limba romana pentru servicii de extensii de gene si laminare in Bucuresti. Scopul paginii este sa ajute vizitatoarele sa inteleaga serviciile disponibile si sa trimita o cerere de programare.
+Sorina - Studio de Gene este un site in limba romana pentru servicii de extensii de gene si laminare in Bucuresti. Scopul paginii este sa ajute vizitatoarele sa inteleaga serviciile disponibile si sa trimita o cerere de programare.
 
 ## Servicii prezentate
 

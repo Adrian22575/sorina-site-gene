@@ -228,7 +228,7 @@ export default function App() {
   return (
     <main>
       <header className="site-header">
-        <a className="brand" href="#home">Sorina Lash Studio</a>
+        <a className="brand" href="#home">Sorina - Studio de Gene</a>
         <nav aria-label="Navigatie principala">
           <a href="#services">Servicii</a>
           <a href="#gallery">Galerie</a>
@@ -297,7 +297,7 @@ export default function App() {
             <ImageSlot
               src={heroImage}
               label="Detaliu premium pentru extensii de gene"
-              alt="Prim-plan editorial cu gene stilizate pentru Sorina Lash Studio"
+              alt="Prim-plan editorial cu gene stilizate pentru Sorina - Studio de Gene"
               tall
             />
             <div className="hero-badge">
@@ -461,7 +461,7 @@ export default function App() {
             <input name="preferred_time" type="time" />
           </label>
           <label>
-            Email optional
+            Adresa de email optionala
             <input name="email" type="email" autoComplete="email" />
           </label>
           <label className="full">
@@ -506,7 +506,7 @@ export default function App() {
 
       <footer className="site-footer">
         <div>
-          <strong>Sorina Lash Studio</strong>
+          <strong>Sorina - Studio de Gene</strong>
           <p>Extensii de gene si laminare in Bucuresti, cu accent pe confort, forma potrivita si rezultat elegant.</p>
         </div>
         <nav aria-label="Servicii in subsol">
