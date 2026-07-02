@@ -470,12 +470,53 @@ function AdminNewBadge() {
   return <span className="admin-new-badge">Nou, nesalvat</span>
 }
 
+const adminSections = [
+  { id: 'admin-services', label: 'Servicii', shortLabel: 'Servicii', icon: Sparkles },
+  { id: 'admin-contact', label: 'Contact/program', shortLabel: 'Contact', icon: Phone },
+  { id: 'admin-gallery', label: 'Galerie foto', shortLabel: 'Galerie', icon: Heart },
+  { id: 'admin-results', label: 'Before/After', shortLabel: 'Rezultate', icon: Crop },
+  { id: 'admin-reviews', label: 'Recenzii', shortLabel: 'Recenzii', icon: Star },
+  { id: 'admin-promotions', label: 'Promotii', shortLabel: 'Promotii', icon: Gift },
+  { id: 'admin-faqs', label: 'FAQ', shortLabel: 'FAQ', icon: ShieldCheck },
+]
+
+function AdminSectionNavigator({ activeSection, onSectionSelect }) {
+  const activeItem = adminSections.find((section) => section.id === activeSection) || adminSections[0]
+
+  return (
+    <nav className="admin-section-nav" aria-label="Navigare sectiuni admin">
+      <p className="admin-section-nav-current">
+        Editezi <strong>{activeItem.label}</strong>
+      </p>
+      <div className="admin-section-nav-list">
+        {adminSections.map(({ id, label, shortLabel, icon: Icon }) => (
+          <a
+            aria-current={activeSection === id ? 'true' : undefined}
+            className={`admin-section-link ${activeSection === id ? 'admin-section-link-active' : ''}`}
+            href={`#${id}`}
+            key={id}
+            onClick={(event) => {
+              event.preventDefault()
+              onSectionSelect(id)
+            }}
+            title={`Mergi la ${label}`}
+          >
+            <Icon size={16} aria-hidden="true" />
+            <span>{shortLabel}</span>
+          </a>
+        ))}
+      </div>
+    </nav>
+  )
+}
+
 function AdminApp() {
   const [password, setPassword] = useState(() => window.sessionStorage.getItem('sorina_admin_password') || '')
   const [draftPassword, setDraftPassword] = useState('')
   const [services, setServices] = useState([])
   const [content, setContent] = useState(() => normalizeContent({}))
   const [status, setStatus] = useState({ state: 'idle', message: '' })
+  const [activeAdminSection, setActiveAdminSection] = useState(adminSections[0].id)
   const isLoggedIn = Boolean(password)
   const isBusy = status.state === 'loading'
 
@@ -565,6 +606,45 @@ function AdminApp() {
       isMounted = false
     }
   }, [password])
+
+  useEffect(() => {
+    if (!isLoggedIn) return undefined
+    const visibleSections = new Map()
+    const sectionElements = adminSections
+      .map((section) => document.getElementById(section.id))
+      .filter(Boolean)
+
+    if (!sectionElements.length) return undefined
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          visibleSections.set(entry.target.id, entry)
+        } else {
+          visibleSections.delete(entry.target.id)
+        }
+      })
+
+      const nextSection = Array.from(visibleSections.values())
+        .sort((first, second) => Math.abs(first.boundingClientRect.top - 120) - Math.abs(second.boundingClientRect.top - 120))[0]
+
+      if (nextSection) setActiveAdminSection(nextSection.target.id)
+    }, {
+      root: null,
+      rootMargin: '-96px 0px -58% 0px',
+      threshold: [0, 0.12, 0.3, 0.6],
+    })
+
+    sectionElements.forEach((section) => observer.observe(section))
+
+    return () => observer.disconnect()
+  }, [isLoggedIn])
+
+  function selectAdminSection(sectionId) {
+    setActiveAdminSection(sectionId)
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    window.history.replaceState(null, '', `#${sectionId}`)
+  }
 
   function login(event) {
     event.preventDefault()
@@ -1275,21 +1355,14 @@ function AdminApp() {
   }
 
   return (
-    <main className="admin-shell">
+    <main className="admin-shell admin-shell-auth">
+      <AdminSectionNavigator activeSection={activeAdminSection} onSectionSelect={selectAdminSection} />
+
       <header className="admin-header">
         <div>
           <p className="eyebrow">Administrare</p>
           <h1>Continut editabil</h1>
           <p>Modificarile salvate aici devin sursa pentru site si formularul de programare.</p>
-          <nav className="admin-jump-nav" aria-label="Sectiuni admin">
-            <a href="#admin-services">Servicii</a>
-            <a href="#admin-contact">Contact/program</a>
-            <a href="#admin-gallery">Galerie</a>
-            <a href="#admin-results">Before/After</a>
-            <a href="#admin-reviews">Recenzii</a>
-            <a href="#admin-promotions">Promotii</a>
-            <a href="#admin-faqs">FAQ</a>
-          </nav>
         </div>
         <div className="admin-actions">
           <button type="button" onClick={loadAdminData} disabled={isBusy}>
