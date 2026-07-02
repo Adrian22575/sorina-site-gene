@@ -957,6 +957,22 @@ form button:disabled {
   justify-content: flex-end;
 }
 
+.admin-link-button {
+  align-items: center;
+  background: #fbf8f4;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--wine);
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 8px;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 16px;
+  text-decoration: none;
+}
+
 .admin-panel {
   background: white;
   border: 1px solid var(--line);
@@ -1091,6 +1107,7 @@ form button:disabled {
 }
 
 .admin-actions button,
+.admin-actions .admin-link-button,
 .admin-row-actions button {
   background: #fbf8f4;
   border: 1px solid var(--line-strong);
@@ -1180,6 +1197,22 @@ form button:disabled {
   font-size: 12px;
   font-weight: 700;
   padding: 7px 11px;
+}
+
+.admin-appointments-only {
+  padding-right: 40px;
+}
+
+.admin-appointments-only .admin-panel:not(#admin-appointments) {
+  display: none;
+}
+
+.admin-appointments-only #admin-appointments {
+  max-width: 1280px;
+}
+
+.admin-appointments-only .admin-appointment {
+  border-left: 4px solid var(--wine);
 }
 
 .admin-new-badge {

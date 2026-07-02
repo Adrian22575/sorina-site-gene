@@ -143,9 +143,23 @@ async function updateAppointment(config, id, body) {
   return { status: 200, appointment }
 }
 
+async function deleteAppointment(config, id) {
+  const current = await readAppointment(config, id)
+  if (!current) return { status: 404, error: 'Programarea nu exista.' }
+
+  await replaceAppointmentReminder(config, { ...current, status: 'cancelled' })
+
+  const result = await supabaseBookingFetch(config, `appointments?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  })
+
+  if (!result.ok) return { status: 400, error: 'Programarea nu a putut fi stearsa.' }
+  return { status: 200, ok: true }
+}
+
 export default async function handler(request, response) {
-  if (!['GET', 'POST', 'PATCH'].includes(request.method)) {
-    response.setHeader('Allow', 'GET, POST, PATCH')
+  if (!['GET', 'POST', 'PATCH', 'DELETE'].includes(request.method)) {
+    response.setHeader('Allow', 'GET, POST, PATCH, DELETE')
     return sendJson(response, 405, { error: 'Metoda nu este permisa.' })
   }
 
@@ -185,6 +199,11 @@ export default async function handler(request, response) {
 
     const id = cleanString(request.query.id, 80)
     if (!id) return sendJson(response, 400, { error: 'ID-ul programarii lipseste.' })
+
+    if (request.method === 'DELETE') {
+      const result = await deleteAppointment(config, id)
+      return sendJson(response, result.status, result.error ? { error: result.error } : { ok: true })
+    }
 
     const result = await updateAppointment(config, id, body)
     return sendJson(response, result.status, result.error ? { error: result.error } : { appointment: result.appointment })

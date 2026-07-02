@@ -670,7 +670,6 @@ function AdminNewBadge() {
 const adminSections = [
   { id: 'admin-services', label: 'Servicii', shortLabel: 'Servicii', icon: Sparkles },
   { id: 'admin-contact', label: 'Contact/program', shortLabel: 'Contact', icon: Phone },
-  { id: 'admin-appointments', label: 'Programari', shortLabel: 'Programari', icon: CalendarDays },
   { id: 'admin-gallery', label: 'Galerie foto', shortLabel: 'Galerie', icon: Heart },
   { id: 'admin-results', label: 'Before/After', shortLabel: 'Rezultate', icon: Crop },
   { id: 'admin-reviews', label: 'Recenzii', shortLabel: 'Recenzii', icon: Star },
@@ -736,7 +735,7 @@ function AdminOrderControls({ index, total, onMoveUp, onMoveDown, disabled = fal
   )
 }
 
-function AdminApp() {
+function AdminApp({ appointmentsOnly = false }) {
   const [password, setPassword] = useState(() => window.sessionStorage.getItem('sorina_admin_password') || '')
   const [draftPassword, setDraftPassword] = useState('')
   const [services, setServices] = useState([])
@@ -1093,6 +1092,27 @@ function AdminApp() {
         itemIndex === index ? normalizeAppointment(data.appointment) : currentAppointment
       )))
       setStatus({ state: 'success', message: 'Programarea a fost salvata.' })
+    } catch (error) {
+      setStatus({ state: 'error', message: error.message })
+    }
+  }
+
+  async function deleteAppointment(index) {
+    const appointment = appointments[index]
+
+    if (!appointment.id) {
+      setAppointments((current) => current.filter((_, itemIndex) => itemIndex !== index))
+      return
+    }
+
+    if (!window.confirm('Stergi definitiv aceasta programare?')) return
+
+    setStatus({ state: 'loading', message: 'Se sterge programarea...' })
+
+    try {
+      await adminRequest(`/api/admin/appointments?id=${encodeURIComponent(appointment.id)}`, { method: 'DELETE' })
+      setAppointments((current) => current.filter((_, itemIndex) => itemIndex !== index))
+      setStatus({ state: 'success', message: 'Programarea a fost stearsa.' })
     } catch (error) {
       setStatus({ state: 'error', message: error.message })
     }
@@ -1758,8 +1778,12 @@ function AdminApp() {
       <main className="admin-shell">
         <section className="admin-login">
           <p className="eyebrow">Administrare</p>
-          <h1>Sorina - Panou continut</h1>
-          <p>Introdu parola de admin pentru a modifica serviciile, contactul, galeria, recenziile, promotiile si FAQ-ul.</p>
+          <h1>{appointmentsOnly ? 'Sorina - Programari' : 'Sorina - Panou continut'}</h1>
+          <p>
+            {appointmentsOnly
+              ? 'Introdu parola de admin pentru a vedea si gestiona programarile.'
+              : 'Introdu parola de admin pentru a modifica serviciile, contactul, galeria, recenziile, promotiile si FAQ-ul.'}
+          </p>
           <form onSubmit={login}>
             <label className="full">
               Parola admin
@@ -1780,16 +1804,25 @@ function AdminApp() {
   }
 
   return (
-    <main className="admin-shell admin-shell-auth">
-      <AdminSectionNavigator activeSection={activeAdminSection} onSectionSelect={selectAdminSection} />
+    <main className={`admin-shell admin-shell-auth ${appointmentsOnly ? 'admin-appointments-only' : ''}`}>
+      {!appointmentsOnly ? (
+        <AdminSectionNavigator activeSection={activeAdminSection} onSectionSelect={selectAdminSection} />
+      ) : null}
 
       <header className="admin-header">
         <div>
           <p className="eyebrow">Administrare</p>
-          <h1>Continut editabil</h1>
-          <p>Modificarile salvate aici devin sursa pentru site si formularul de programare.</p>
+          <h1>{appointmentsOnly ? 'Programari cliente' : 'Continut editabil'}</h1>
+          <p>
+            {appointmentsOnly
+              ? 'Agenda separata pentru programari, mutari, statusuri, note interne si notificari.'
+              : 'Modificarile salvate aici devin sursa pentru site si formularul de programare.'}
+          </p>
         </div>
         <div className="admin-actions">
+          <a className="admin-link-button" href={appointmentsOnly ? '/admin' : '/admin/programari'}>
+            <CalendarDays size={16} /> {appointmentsOnly ? 'Continut site' : 'Programari'}
+          </a>
           <button type="button" onClick={loadAdminData} disabled={isBusy}>
             <RefreshCcw size={16} /> Reincarca
           </button>
@@ -2123,6 +2156,9 @@ function AdminApp() {
                   disabled={isBusy || appointment.status === 'cancelled'}
                 >
                   Anuleaza
+                </button>
+                <button type="button" className="admin-danger" onClick={() => deleteAppointment(index)} disabled={isBusy}>
+                  <Trash2 size={16} /> Sterge
                 </button>
               </div>
             </article>
@@ -2944,5 +2980,7 @@ function PublicApp() {
 }
 
 export default function App() {
-  return window.location.pathname === '/admin' ? <AdminApp /> : <PublicApp />
+  if (window.location.pathname === '/admin/programari') return <AdminApp appointmentsOnly />
+  if (window.location.pathname === '/admin') return <AdminApp />
+  return <PublicApp />
 }

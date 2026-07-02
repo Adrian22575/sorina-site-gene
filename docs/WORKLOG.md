@@ -253,3 +253,10 @@
   - Cancellation/replacement of scheduled reminders when an admin moves or cancels an appointment.
 - Added a Vercel Cron endpoint for the daily "tomorrow appointments" digest, protected by `CRON_SECRET`.
 - Added `/admin` UI for managing client appointments, statuses, date/time moves, notes, and notification email settings.
+
+## 2026-07-02 Appointments Admin Separation
+
+- Added `/admin/programari` as a dedicated appointments admin page.
+- Kept `/admin` focused on editable site content, with a header link to the appointments page.
+- Added a real delete action for appointments in the admin API and UI.
+- Delete cancels/replaces any pending reminder before removing the appointment row.
