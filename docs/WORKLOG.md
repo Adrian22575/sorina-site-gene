@@ -185,3 +185,30 @@
 - Disabled save/delete actions while an admin save/delete operation is processing.
 - Raised gallery upload limit from 4 MB to 10 MB in both API validation and Supabase Storage bucket `site-gallery`.
 - Applied migration `202607020001_raise_gallery_upload_limit.sql` to the dedicated Sorina Supabase project.
+
+## 2026-07-02 Gallery Crop Pass
+
+- Added a square crop workflow to `/admin` gallery uploads:
+  - After selecting a JPG, PNG, or WEBP file, the owner sees a 1:1 crop preview.
+  - The owner can adjust zoom plus horizontal and vertical framing before saving.
+  - The save button stays disabled until the crop is confirmed.
+- Processed confirmed crops client-side to a 1200 x 1200 JPEG before uploading through the existing gallery API.
+- Kept the existing Supabase Storage bucket and 10 MB upload limit; no database or storage schema change was required.
+
+## 2026-07-02 Service Image Crop Pass
+
+- Extended the same 1:1 crop workflow to service cards in `/admin`.
+- Added `image_url` support to service reads/writes so public service cards can show owner-uploaded images.
+- Added migration `202607020002_add_service_images.sql` to store service image URLs on `public.site_services`.
+- Reused the existing public `site-gallery` Supabase Storage bucket and protected admin upload path.
+
+## 2026-07-02 Before/After Admin Pass
+
+- Added editable before/after results to `/admin`.
+- Added migration `202607020003_create_before_after_results.sql`:
+  - Creates `public.site_results`.
+  - Stores title, before image URL, after image URL, order, and visibility.
+  - Enables RLS and seeds the three existing result placeholders.
+- Applied the migration to the dedicated Sorina Supabase project `yjhkdmbdilzuwhwluico`.
+- Reused the existing 1:1 crop workflow for both the Inainte and Dupa images.
+- Connected the public results section to `site_results`, while preserving placeholder visuals until real images are uploaded.

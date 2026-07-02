@@ -61,6 +61,12 @@ async function createItem(config, type, body) {
     if (imageUrl) payload.image_url = imageUrl
     if (!payload.alt_text) payload.alt_text = payload.title
   }
+  if (type === 'results') {
+    const beforeImageUrl = await uploadGalleryImage(config, body, 'before_image_data', 'before_image_name')
+    const afterImageUrl = await uploadGalleryImage(config, body, 'after_image_data', 'after_image_name')
+    if (beforeImageUrl) payload.before_image_url = beforeImageUrl
+    if (afterImageUrl) payload.after_image_url = afterImageUrl
+  }
 
   const validationError = validatePayload(type, payload)
   if (validationError) return { error: validationError, status: 400 }
@@ -84,6 +90,12 @@ async function updateItem(config, type, id, body) {
     const imageUrl = await uploadGalleryImage(config, body)
     if (imageUrl) payload.image_url = imageUrl
     if (!payload.alt_text) payload.alt_text = payload.title
+  }
+  if (type === 'results') {
+    const beforeImageUrl = await uploadGalleryImage(config, body, 'before_image_data', 'before_image_name')
+    const afterImageUrl = await uploadGalleryImage(config, body, 'after_image_data', 'after_image_name')
+    if (beforeImageUrl) payload.before_image_url = beforeImageUrl
+    if (afterImageUrl) payload.after_image_url = afterImageUrl
   }
 
   const validationError = validatePayload(type, payload)

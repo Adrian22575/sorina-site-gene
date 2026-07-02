@@ -12,24 +12,28 @@ const fallbackServices = [
     duration: '60 min',
     price: 'Pret de completat',
     note: 'Gene fine, aerisite, pentru un rezultat discret si elegant.',
+    image_url: '',
   },
   {
     title: 'Volum delicat',
     duration: '90 min',
     price: 'Pret de completat',
     note: 'Volum fin, privire luminoasa si linie rafinata.',
+    image_url: '',
   },
   {
     title: 'Efect intens',
     duration: '120 min',
     price: 'Pret de completat',
     note: 'Efect vizibil, construit cu atentie dupa forma ochilor.',
+    image_url: '',
   },
   {
     title: 'Laminare gene / sprancene',
     duration: '60 min',
     price: 'Pret de completat',
     note: 'Definire si aranjare pentru gene sau sprancene naturale.',
+    image_url: '',
   },
 ]
 
@@ -40,6 +44,7 @@ function mapService(row) {
     duration: row.duration,
     price: row.price_label,
     note: row.note,
+    image_url: row.image_url,
     isActive: row.is_active,
     sort_order: row.sort_order,
   }
@@ -47,7 +52,7 @@ function mapService(row) {
 
 async function listServices(config) {
   const endpoint = new URL(`${config.baseUrl}/rest/v1/site_services`)
-  endpoint.searchParams.set('select', 'id,title,duration,price_label,note,is_active,sort_order')
+  endpoint.searchParams.set('select', 'id,title,duration,price_label,note,image_url,is_active,sort_order')
   endpoint.searchParams.set('is_active', 'eq.true')
   endpoint.searchParams.set('order', 'sort_order.asc,title.asc')
 
@@ -93,6 +98,7 @@ export default async function handler(request, response) {
       services,
       settings: { ...fallbackContent.settings, ...content.settings },
       gallery: content.gallery.length ? content.gallery : fallbackContent.gallery,
+      results: content.results.length ? content.results : fallbackContent.results,
       reviews: content.reviews.length ? content.reviews : fallbackContent.reviews,
       promotions: content.promotions.length ? content.promotions : fallbackContent.promotions,
       faqs: content.faqs.length ? content.faqs : fallbackContent.faqs,

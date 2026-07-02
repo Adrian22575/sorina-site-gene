@@ -448,6 +448,14 @@ p {
   position: absolute;
 }
 
+.comparison-layer img {
+  height: 100%;
+  inset: 0;
+  object-fit: cover;
+  position: absolute;
+  width: 100%;
+}
+
 .comparison-label {
   border-radius: 999px;
   color: white;
@@ -1025,6 +1033,73 @@ form button:disabled {
   width: 100%;
 }
 
+.admin-cropper {
+  align-items: start;
+  background: #fbf8f4;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(240px, 360px) minmax(220px, 1fr);
+  padding: 14px;
+}
+
+.admin-crop-frame {
+  aspect-ratio: 1 / 1;
+  background: #211917;
+  border: 1px solid rgba(111, 19, 38, 0.28);
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.admin-crop-frame::after {
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  box-shadow:
+    0 0 0 999px rgba(20, 16, 15, 0.18),
+    inset 0 0 0 1px rgba(111, 19, 38, 0.26);
+  content: '';
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.admin-crop-frame img {
+  position: absolute;
+  user-select: none;
+}
+
+.admin-crop-controls {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-crop-controls input[type='range'] {
+  accent-color: var(--wine);
+  min-height: 36px;
+  padding: 0;
+}
+
+.admin-crop-actions {
+  align-self: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  grid-column: 2;
+}
+
+.admin-cropper-compact {
+  grid-template-columns: minmax(180px, 260px) minmax(180px, 1fr);
+}
+
+.admin-shell .admin-secondary {
+  background: #ffffff;
+  border: 1px solid var(--line-strong);
+  color: var(--wine);
+}
+
 .admin-image-link {
   background: #fbf8f4;
   border: 1px solid var(--line);
@@ -1049,6 +1124,20 @@ form button:disabled {
   overflow-wrap: anywhere;
 }
 
+.admin-result-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-result-image {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+
 @media (hover: none) {
   .comparison-range {
     pointer-events: auto;
@@ -1063,8 +1152,14 @@ form button:disabled {
   }
 
   .admin-header,
-  .admin-service-grid {
+  .admin-service-grid,
+  .admin-result-grid,
+  .admin-cropper {
     grid-template-columns: 1fr;
+  }
+
+  .admin-crop-actions {
+    grid-column: auto;
   }
 
   .admin-header {

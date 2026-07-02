@@ -17,6 +17,11 @@ export const fallbackContent = {
     { title: 'Atmosfera studio', image_url: '', alt_text: 'Atmosfera studio' },
     { title: 'Rezultat final', image_url: '', alt_text: 'Rezultat final' },
   ],
+  results: [
+    { title: 'Ridicare naturala', before_image_url: '', after_image_url: '', sort_order: 10, is_active: true },
+    { title: 'Volum delicat', before_image_url: '', after_image_url: '', sort_order: 20, is_active: true },
+    { title: 'Set intens', before_image_url: '', after_image_url: '', sort_order: 30, is_active: true },
+  ],
   reviews: [
     {
       customer_name: 'Nume clienta de completat',
@@ -76,6 +81,11 @@ export const collectionConfig = {
     table: 'site_reviews',
     select: 'id,customer_name,review_text,rating,sort_order,is_active',
     order: 'sort_order.asc,customer_name.asc',
+  },
+  results: {
+    table: 'site_results',
+    select: 'id,title,before_image_url,after_image_url,sort_order,is_active',
+    order: 'sort_order.asc,title.asc',
   },
   promotions: {
     table: 'site_promotions',
@@ -185,15 +195,16 @@ export async function listSettings(config) {
 }
 
 export async function listSiteContent(config, activeOnly = true) {
-  const [settings, gallery, reviews, promotions, faqs] = await Promise.all([
+  const [settings, gallery, results, reviews, promotions, faqs] = await Promise.all([
     listSettings(config),
     listCollection(config, 'gallery', activeOnly),
+    listCollection(config, 'results', activeOnly),
     listCollection(config, 'reviews', activeOnly),
     listCollection(config, 'promotions', activeOnly),
     listCollection(config, 'faqs', activeOnly),
   ])
 
-  return { settings, gallery, reviews, promotions, faqs }
+  return { settings, gallery, results, reviews, promotions, faqs }
 }
 
 function baseItemPayload(body) {
@@ -222,6 +233,15 @@ export function itemPayload(type, body) {
     }
   }
 
+  if (type === 'results') {
+    return {
+      ...baseItemPayload(body),
+      title: cleanString(body.title, 140),
+      before_image_url: cleanString(body.before_image_url, 900),
+      after_image_url: cleanString(body.after_image_url, 900),
+    }
+  }
+
   if (type === 'promotions') {
     return {
       ...baseItemPayload(body),
@@ -245,6 +265,7 @@ export function itemPayload(type, body) {
 
 export function validatePayload(type, payload) {
   if (type === 'gallery' && !payload.title) return 'Titlul imaginii este obligatoriu.'
+  if (type === 'results' && !payload.title) return 'Titlul rezultatului este obligatoriu.'
   if (type === 'reviews' && !payload.review_text) return 'Textul recenziei este obligatoriu.'
   if (type === 'promotions' && (!payload.title || !payload.description)) return 'Titlul si descrierea promotiei sunt obligatorii.'
   if (type === 'faqs' && (!payload.question || !payload.answer)) return 'Intrebarea si raspunsul sunt obligatorii.'
@@ -261,8 +282,8 @@ export function contactPayload(body) {
   }
 }
 
-export async function uploadGalleryImage(config, body) {
-  const dataUrl = cleanString(body.image_data, 15_000_000)
+export async function uploadGalleryImage(config, body, dataField = 'image_data', nameField = 'image_name') {
+  const dataUrl = cleanString(body[dataField], 15_000_000)
   if (!dataUrl) return ''
 
   const match = dataUrl.match(/^data:(image\/(?:jpeg|png|webp));base64,(.+)$/)
@@ -273,7 +294,7 @@ export async function uploadGalleryImage(config, body) {
   if (buffer.length > 10 * 1024 * 1024) throw new Error('Imaginea trebuie sa fie sub 10 MB.')
 
   const extension = mimeType.split('/')[1].replace('jpeg', 'jpg')
-  const safeName = cleanString(body.image_name, 100).replace(/[^a-zA-Z0-9._-]/g, '-')
+  const safeName = cleanString(body[nameField], 100).replace(/[^a-zA-Z0-9._-]/g, '-')
   const objectName = `${Date.now()}-${crypto.randomUUID()}-${safeName || `galerie.${extension}`}`
 
   const result = await fetch(`${config.baseUrl}/storage/v1/object/site-gallery/${objectName}`, {

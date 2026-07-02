@@ -9,8 +9,8 @@ Date: 2026-07-01
 - Public content endpoint: `api/content.js`, used for active editable services.
 - Admin services endpoint: `api/admin/services.js`, protected by `ADMIN_PASSWORD`.
 - Admin content endpoint: `api/admin/content.js`, protected by `ADMIN_PASSWORD`.
-- Database: Supabase tables `public.appointments`, `public.site_services`, `public.site_settings`, `public.site_gallery`, `public.site_reviews`, `public.site_promotions`, and `public.site_faqs`.
-- Storage: Supabase public bucket `site-gallery` for owner-uploaded gallery images.
+- Database: Supabase tables `public.appointments`, `public.site_services`, `public.site_settings`, `public.site_gallery`, `public.site_results`, `public.site_reviews`, `public.site_promotions`, and `public.site_faqs`.
+- Storage: Supabase public bucket `site-gallery` for owner-uploaded gallery, service, and before/after images.
 - Secret handling: `SUPABASE_SERVICE_ROLE_KEY` is server-only and must be stored in Vercel environment variables. Do not expose it in `VITE_` or `NEXT_PUBLIC_` variables.
 
 ## Current Link Status
@@ -47,11 +47,17 @@ supabase/migrations/202607010002_create_site_services.sql
 supabase/migrations/202607010003_fix_site_services_updated_at_search_path.sql
 supabase/migrations/202607010004_create_editable_site_content.sql
 supabase/migrations/202607020001_raise_gallery_upload_limit.sql
+supabase/migrations/202607020002_add_service_images.sql
+supabase/migrations/202607020003_create_before_after_results.sql
 ```
 
 The appointment migration creates `public.appointments`, enables RLS, revokes `anon` and `authenticated` access, and expects inserts to go through the Vercel API using the server-side service role key.
 
 The services migration creates `public.site_services`, enables RLS, and seeds the current Romanian service placeholders. Public reads and admin writes go through Vercel API routes using the server-side service role key.
+
+The service image migration adds `image_url` to `public.site_services` so owner-uploaded service card images can be shown on the public site.
+
+The before/after results migration creates `public.site_results`, enables RLS, and stores the editable comparison image pairs.
 
 The editable content migration creates settings, gallery, reviews, promotions, FAQ tables, and the `site-gallery` storage bucket. These tables also keep RLS enabled and are accessed only through Vercel API routes.
 
@@ -72,7 +78,7 @@ Do not link or deploy this repository to that project. The Sorina site needs its
 3. Add a strong private password as `ADMIN_PASSWORD`.
 4. Deploy after env vars are present, or let Git integration deploy automatically after push.
 5. Test `/admin`, edit a service, contact field, gallery image, review, promotion, and FAQ item.
-6. Confirm `public.site_services`, `public.site_settings`, `public.site_gallery`, `public.site_reviews`, `public.site_promotions`, and `public.site_faqs` update in Supabase.
+6. Confirm `public.site_services`, `public.site_settings`, `public.site_gallery`, `public.site_results`, `public.site_reviews`, `public.site_promotions`, and `public.site_faqs` update in Supabase.
 7. Test the booking form and confirm a row appears in the Sorina `public.appointments` table.
 
 ## CLI Notes
@@ -99,6 +105,8 @@ Do not use `--project facultate` and do not run `vercel link` if the CLI propose
 - `/api/content` returns fallback services if env vars are missing.
 - `/admin` loads the owner panel after `ADMIN_PASSWORD` is configured.
 - Gallery upload accepts JPG, PNG, and WEBP images under 10 MB.
+- Service image upload uses the same crop workflow and 10 MB limit as gallery upload.
+- Before/after image upload uses the same crop workflow and 10 MB limit as gallery upload.
 - Supabase table has RLS enabled and no public insert policy.
 
 ## Supabase Verification
@@ -112,6 +120,7 @@ Completed on 2026-07-01:
 - `public.appointments` exists.
 - `public.site_services` exists and contains the current Romanian service placeholders.
 - Editable content tables exist and contain Romanian placeholders.
+- `public.site_results` exists and contains the current before/after placeholders.
 - Storage bucket `site-gallery` exists, is public, and accepts JPG/PNG/WEBP files up to 10 MB.
 - RLS is enabled on `public.appointments`.
 - RLS is enabled on `public.site_services`.
@@ -120,6 +129,8 @@ Completed on 2026-07-01:
 - Supabase security advisor only reports `RLS Enabled No Policy` as INFO for server-side-only content tables; this is intentional because API routes use server-side service role access.
 - Supabase performance advisor only reports unused appointment indexes as INFO while the project is new.
 - Project URL is `https://yjhkdmbdilzuwhwluico.supabase.co`.
+- Migration `add_service_images` applied to `yjhkdmbdilzuwhwluico`.
+- Migration `create_before_after_results` applied to `yjhkdmbdilzuwhwluico`.
 
 Still needed:
 
