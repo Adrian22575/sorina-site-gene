@@ -286,11 +286,30 @@ function prefixedCropBoxStyle(item, prefix) {
   return cropBoxStyle(prefixedCropItem(item, prefix))
 }
 
+function cropPixelMetrics(item, rect) {
+  const metrics = cropMetrics(item)
+  const boxWidth = (metrics.boxWidth / 100) * rect.width
+  const boxHeight = (metrics.boxHeight / 100) * rect.height
+  const maxLeft = Math.max(0, rect.width - boxWidth)
+  const maxTop = Math.max(0, rect.height - boxHeight)
+  const left = maxLeft * (clamp(item.crop_x || 50, 0, 100) / 100)
+  const top = maxTop * (clamp(item.crop_y || 50, 0, 100) / 100)
+
+  return {
+    boxHeight,
+    boxWidth,
+    left,
+    maxLeft,
+    maxTop,
+    top,
+  }
+}
+
 function cropDragOffsetFromPointer(event, item) {
   const rect = event.currentTarget.getBoundingClientRect()
-  const metrics = cropMetrics(item)
-  const pointerLeft = ((event.clientX - rect.left) / rect.width) * 100
-  const pointerTop = ((event.clientY - rect.top) / rect.height) * 100
+  const metrics = cropPixelMetrics(item, rect)
+  const pointerLeft = event.clientX - rect.left
+  const pointerTop = event.clientY - rect.top
   const isInsideBox = (
     pointerLeft >= metrics.left
     && pointerLeft <= metrics.left + metrics.boxWidth
@@ -305,7 +324,8 @@ function cropDragOffsetFromPointer(event, item) {
 }
 
 function cropDragOffsetFromTarget(target, item) {
-  const metrics = cropMetrics(item)
+  const rect = target.getBoundingClientRect()
+  const metrics = cropPixelMetrics(item, rect)
   const x = Number(target.dataset.cropOffsetX)
   const y = Number(target.dataset.cropOffsetY)
 
@@ -322,9 +342,9 @@ function storeCropDragOffset(target, offset) {
 
 function cropPositionFromPointer(event, item, dragOffset = null) {
   const rect = event.currentTarget.getBoundingClientRect()
-  const metrics = cropMetrics(item)
-  const pointerLeft = ((event.clientX - rect.left) / rect.width) * 100
-  const pointerTop = ((event.clientY - rect.top) / rect.height) * 100
+  const metrics = cropPixelMetrics(item, rect)
+  const pointerLeft = event.clientX - rect.left
+  const pointerTop = event.clientY - rect.top
   const offset = dragOffset || cropDragOffsetFromTarget(event.currentTarget, item)
   const boxLeft = clamp(pointerLeft - offset.x, 0, metrics.maxLeft)
   const boxTop = clamp(pointerTop - offset.y, 0, metrics.maxTop)
