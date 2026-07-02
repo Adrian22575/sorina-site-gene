@@ -44,15 +44,19 @@ export function bookingSlots() {
   return envSlots.length ? [...new Set(envSlots)] : defaultBookingSlots
 }
 
-export function todayInBucharest() {
+export function todayInBucharest(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-GB', {
     day: '2-digit',
     month: '2-digit',
     timeZone: bookingTimeZone,
     year: 'numeric',
-  }).formatToParts(new Date())
+  }).formatToParts(date)
   const part = (type) => parts.find((item) => item.type === type)?.value || ''
   return `${part('year')}-${part('month')}-${part('day')}`
+}
+
+export function tomorrowInBucharest() {
+  return todayInBucharest(new Date(Date.now() + 24 * 60 * 60 * 1000))
 }
 
 export function isPastDate(value) {
@@ -105,6 +109,26 @@ export async function bookedTimesForDate(config, date) {
   endpoint.searchParams.set('select', 'preferred_time,status')
   endpoint.searchParams.set('preferred_date', `eq.${date}`)
   endpoint.searchParams.set('status', 'neq.cancelled')
+
+  const result = await fetch(endpoint, {
+    headers: {
+      apikey: config.serviceRoleKey,
+      Authorization: `Bearer ${config.serviceRoleKey}`,
+    },
+  })
+
+  if (!result.ok) throw new Error('Sloturile ocupate nu au putut fi citite.')
+
+  const rows = await result.json()
+  return new Set(rows.map((row) => normalizeTime(row.preferred_time)).filter(Boolean))
+}
+
+export async function bookedTimesForDateExcept(config, date, appointmentId = '') {
+  const endpoint = new URL(`${config.baseUrl}/rest/v1/appointments`)
+  endpoint.searchParams.set('select', 'id,preferred_time,status')
+  endpoint.searchParams.set('preferred_date', `eq.${date}`)
+  endpoint.searchParams.set('status', 'neq.cancelled')
+  if (appointmentId) endpoint.searchParams.set('id', `neq.${appointmentId}`)
 
   const result = await fetch(endpoint, {
     headers: {

@@ -136,6 +136,20 @@ const defaultResults = [
   { title: 'Set intens', before_image_url: '', after_image_url: '', before_alt_text: '', after_alt_text: '', caption: '', sort_order: 30, is_active: true },
 ]
 
+const defaultNotificationSettings = {
+  email: '',
+  notify_new: true,
+  notify_daily: true,
+  notify_before: true,
+}
+
+const appointmentStatusOptions = [
+  { value: 'new', label: 'Noua' },
+  { value: 'contacted', label: 'Contactata' },
+  { value: 'confirmed', label: 'Confirmata' },
+  { value: 'cancelled', label: 'Anulata' },
+]
+
 function bucharestDateString(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-GB', {
     day: '2-digit',
@@ -200,6 +214,35 @@ function normalizeContent(data) {
     reviews: Array.isArray(data.reviews) && data.reviews.length ? data.reviews.map(normalizeOrderedItem) : defaultReviews,
     promotions: Array.isArray(data.promotions) && data.promotions.length ? data.promotions.map(normalizeOrderedItem) : defaultPromotions,
     faqs: Array.isArray(data.faqs) && data.faqs.length ? data.faqs.map(normalizeOrderedItem) : defaultFaqs,
+  }
+}
+
+function normalizeNotificationSettings(settings = {}) {
+  return {
+    ...defaultNotificationSettings,
+    ...settings,
+    email: settings.email || '',
+    notify_new: settings.notify_new !== false,
+    notify_daily: settings.notify_daily !== false,
+    notify_before: settings.notify_before !== false,
+  }
+}
+
+function normalizeAppointment(appointment = {}) {
+  return {
+    id: appointment.id || null,
+    full_name: appointment.full_name || '',
+    phone: appointment.phone || '',
+    email: appointment.email || '',
+    service: appointment.service || '',
+    preferred_date: appointment.preferred_date || bucharestDateString(),
+    preferred_time: appointment.preferred_time || '',
+    message: appointment.message || '',
+    status: appointment.status || 'new',
+    source: appointment.source || 'admin',
+    internal_notes: appointment.internal_notes || '',
+    created_at: appointment.created_at || '',
+    updated_at: appointment.updated_at || '',
   }
 }
 
@@ -627,6 +670,7 @@ function AdminNewBadge() {
 const adminSections = [
   { id: 'admin-services', label: 'Servicii', shortLabel: 'Servicii', icon: Sparkles },
   { id: 'admin-contact', label: 'Contact/program', shortLabel: 'Contact', icon: Phone },
+  { id: 'admin-appointments', label: 'Programari', shortLabel: 'Programari', icon: CalendarDays },
   { id: 'admin-gallery', label: 'Galerie foto', shortLabel: 'Galerie', icon: Heart },
   { id: 'admin-results', label: 'Before/After', shortLabel: 'Rezultate', icon: Crop },
   { id: 'admin-reviews', label: 'Recenzii', shortLabel: 'Recenzii', icon: Star },
@@ -696,6 +740,9 @@ function AdminApp() {
   const [password, setPassword] = useState(() => window.sessionStorage.getItem('sorina_admin_password') || '')
   const [draftPassword, setDraftPassword] = useState('')
   const [services, setServices] = useState([])
+  const [appointments, setAppointments] = useState([])
+  const [notificationSettings, setNotificationSettings] = useState(defaultNotificationSettings)
+  const [adminSlots, setAdminSlots] = useState([])
   const [content, setContent] = useState(() => normalizeContent({}))
   const [status, setStatus] = useState({ state: 'idle', message: '' })
   const [activeAdminSection, setActiveAdminSection] = useState(adminSections[0].id)
@@ -727,12 +774,16 @@ function AdminApp() {
     setStatus({ state: 'loading', message: 'Se incarca continutul...' })
 
     try {
-      const [serviceData, contentData] = await Promise.all([
+      const [serviceData, contentData, appointmentData] = await Promise.all([
         adminRequest('/api/admin/services'),
         adminRequest('/api/admin/content'),
+        adminRequest('/api/admin/appointments'),
       ])
       setServices(serviceData.services.map(normalizeService))
       setContent(normalizeContent(contentData))
+      setAppointments((appointmentData.appointments || []).map(normalizeAppointment))
+      setNotificationSettings(normalizeNotificationSettings(appointmentData.notifications))
+      setAdminSlots(appointmentData.slots || [])
       setStatus({ state: 'success', message: 'Continutul este actualizat.' })
     } catch (error) {
       setStatus({ state: 'error', message: error.message })
@@ -747,7 +798,7 @@ function AdminApp() {
       setStatus({ state: 'loading', message: 'Se incarca continutul...' })
 
       try {
-        const [serviceResponse, contentResponse] = await Promise.all([
+        const [serviceResponse, contentResponse, appointmentResponse] = await Promise.all([
           fetch(adminApiPath('/api/admin/services'), {
             credentials: 'same-origin',
             headers: {
@@ -762,6 +813,13 @@ function AdminApp() {
               'x-admin-password': password,
             },
           }),
+          fetch(adminApiPath('/api/admin/appointments'), {
+            credentials: 'same-origin',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-admin-password': password,
+            },
+          }),
         ])
         const serviceData = (serviceResponse.headers.get('Content-Type') || '').includes('application/json')
           ? await serviceResponse.json().catch(() => ({}))
@@ -769,13 +827,20 @@ function AdminApp() {
         const contentData = (contentResponse.headers.get('Content-Type') || '').includes('application/json')
           ? await contentResponse.json().catch(() => ({}))
           : {}
+        const appointmentData = (appointmentResponse.headers.get('Content-Type') || '').includes('application/json')
+          ? await appointmentResponse.json().catch(() => ({}))
+          : {}
 
         if (!serviceResponse.ok) throw new Error(serviceData.error || 'Serviciile nu au putut fi incarcate.')
         if (!contentResponse.ok) throw new Error(contentData.error || 'Continutul nu a putut fi incarcat.')
+        if (!appointmentResponse.ok) throw new Error(appointmentData.error || 'Programarile nu au putut fi incarcate.')
 
         if (isMounted) {
           setServices(serviceData.services.map(normalizeService))
           setContent(normalizeContent(contentData))
+          setAppointments((appointmentData.appointments || []).map(normalizeAppointment))
+          setNotificationSettings(normalizeNotificationSettings(appointmentData.notifications))
+          setAdminSlots(appointmentData.slots || [])
           setStatus({ state: 'success', message: 'Continutul este actualizat.' })
         }
       } catch (error) {
@@ -840,6 +905,9 @@ function AdminApp() {
     window.sessionStorage.removeItem('sorina_admin_password')
     setPassword('')
     setServices([])
+    setAppointments([])
+    setNotificationSettings(defaultNotificationSettings)
+    setAdminSlots([])
     setContent(normalizeContent({}))
     setStatus({ state: 'idle', message: '' })
   }
@@ -855,6 +923,29 @@ function AdminApp() {
       ...current,
       contact: { ...current.contact, [field]: value },
     }))
+  }
+
+  function updateNotificationSetting(field, value) {
+    setNotificationSettings((current) => ({ ...current, [field]: value }))
+  }
+
+  function updateAppointment(index, field, value) {
+    setAppointments((current) => current.map((appointment, itemIndex) => (
+      itemIndex === index ? { ...appointment, [field]: value } : appointment
+    )))
+  }
+
+  function addAppointment() {
+    setAppointments((current) => [
+      normalizeAppointment({
+        full_name: 'Clienta noua',
+        preferred_date: bucharestDateString(),
+        preferred_time: adminSlots[0] || '10:00',
+        status: 'new',
+      }),
+      ...current,
+    ])
+    setStatus({ state: 'success', message: 'Programare noua adaugata. Completeaza datele si apasa Salveaza.' })
   }
 
   function updateCollection(collection, index, field, value) {
@@ -962,6 +1053,46 @@ function AdminApp() {
       })
       setContent((current) => normalizeContent({ ...current, settings: data.settings }))
       setStatus({ state: 'success', message: 'Datele de contact au fost salvate.' })
+    } catch (error) {
+      setStatus({ state: 'error', message: error.message })
+    }
+  }
+
+  async function saveNotificationSettings() {
+    setStatus({ state: 'loading', message: 'Se salveaza notificarile...' })
+
+    try {
+      const data = await adminRequest('/api/admin/appointments', {
+        method: 'PATCH',
+        body: JSON.stringify({ notifications: notificationSettings }),
+      })
+      setNotificationSettings(normalizeNotificationSettings(data.notifications))
+      setStatus({ state: 'success', message: 'Setarile de notificari au fost salvate.' })
+    } catch (error) {
+      setStatus({ state: 'error', message: error.message })
+    }
+  }
+
+  async function saveAppointment(index) {
+    const appointment = appointments[index]
+    setStatus({ state: 'loading', message: 'Se salveaza programarea...' })
+
+    try {
+      const data = await adminRequest(
+        appointment.id
+          ? `/api/admin/appointments?id=${encodeURIComponent(appointment.id)}`
+          : '/api/admin/appointments',
+        {
+          method: appointment.id ? 'PATCH' : 'POST',
+          body: JSON.stringify(appointment),
+        },
+      )
+
+      if (!data.appointment) throw new Error('Serverul nu a returnat programarea salvata.')
+      setAppointments((current) => current.map((currentAppointment, itemIndex) => (
+        itemIndex === index ? normalizeAppointment(data.appointment) : currentAppointment
+      )))
+      setStatus({ state: 'success', message: 'Programarea a fost salvata.' })
     } catch (error) {
       setStatus({ state: 'error', message: error.message })
     }
@@ -1864,6 +1995,138 @@ function AdminApp() {
             Text harta/zona acces
             <input value={content.contact.map_label} onChange={(event) => updateContact('map_label', event.target.value)} />
           </label>
+        </div>
+      </section>
+
+      <section className="admin-panel" id="admin-appointments">
+        <div className="admin-panel-header">
+          <h2>Programari cliente</h2>
+          <div className="admin-panel-actions">
+            <button type="button" className="admin-secondary" onClick={saveNotificationSettings} disabled={isBusy}>
+              <AtSign size={16} /> Salveaza notificari
+            </button>
+            <button type="button" onClick={addAppointment} disabled={isBusy}>
+              <Plus size={16} /> Adauga programare
+            </button>
+          </div>
+        </div>
+
+        <div className="admin-service admin-appointment-settings">
+          <div className="admin-service-grid">
+            <label className="full">
+              Email pentru notificari
+              <input
+                type="email"
+                value={notificationSettings.email}
+                placeholder="email@sorina.ro"
+                onChange={(event) => updateNotificationSetting('email', event.target.value)}
+              />
+            </label>
+            <label className="admin-check">
+              <input
+                type="checkbox"
+                checked={notificationSettings.notify_new}
+                onChange={(event) => updateNotificationSetting('notify_new', event.target.checked)}
+              />
+              <span>Email la programare noua</span>
+            </label>
+            <label className="admin-check">
+              <input
+                type="checkbox"
+                checked={notificationSettings.notify_daily}
+                onChange={(event) => updateNotificationSetting('notify_daily', event.target.checked)}
+              />
+              <span>Sumar zilnic pentru maine</span>
+            </label>
+            <label className="admin-check">
+              <input
+                type="checkbox"
+                checked={notificationSettings.notify_before}
+                onChange={(event) => updateNotificationSetting('notify_before', event.target.checked)}
+              />
+              <span>Reminder cu o ora inainte</span>
+            </label>
+          </div>
+        </div>
+
+        <div className="admin-service-list">
+          {appointments.map((appointment, index) => (
+            <article className={`admin-service admin-appointment ${appointment.id ? '' : 'admin-service-new'}`} key={appointment.id || `appointment-${index}`}>
+              {!appointment.id ? <AdminNewBadge /> : null}
+              <div className="admin-appointment-meta">
+                <strong>{appointment.preferred_date || 'Data lipsa'} · {appointment.preferred_time || 'Ora lipsa'}</strong>
+                <span>{appointmentStatusOptions.find((option) => option.value === appointment.status)?.label || appointment.status}</span>
+              </div>
+              <div className="admin-service-grid">
+                <label>
+                  Nume clienta
+                  <input value={appointment.full_name} onChange={(event) => updateAppointment(index, 'full_name', event.target.value)} />
+                </label>
+                <label>
+                  Telefon
+                  <input value={appointment.phone} onChange={(event) => updateAppointment(index, 'phone', event.target.value)} />
+                </label>
+                <label>
+                  Email clienta
+                  <input type="email" value={appointment.email} onChange={(event) => updateAppointment(index, 'email', event.target.value)} />
+                </label>
+                <label>
+                  Status
+                  <select value={appointment.status} onChange={(event) => updateAppointment(index, 'status', event.target.value)}>
+                    {appointmentStatusOptions.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Data
+                  <input type="date" value={appointment.preferred_date} onChange={(event) => updateAppointment(index, 'preferred_date', event.target.value)} />
+                </label>
+                <label>
+                  Ora
+                  <select value={appointment.preferred_time} onChange={(event) => updateAppointment(index, 'preferred_time', event.target.value)}>
+                    <option value="">Alege ora</option>
+                    {adminSlots.map((slot) => (
+                      <option key={slot} value={slot}>{slot}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="full">
+                  Serviciu
+                  <select value={appointment.service} onChange={(event) => updateAppointment(index, 'service', event.target.value)}>
+                    <option value="">Alege serviciu</option>
+                    {appointment.service && !services.some((service) => service.title === appointment.service) ? (
+                      <option value={appointment.service}>{appointment.service}</option>
+                    ) : null}
+                    {services.map((service) => (
+                      <option key={service.id || service.title} value={service.title}>{service.title}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="full">
+                  Mesaj clienta
+                  <textarea rows="3" value={appointment.message} onChange={(event) => updateAppointment(index, 'message', event.target.value)} />
+                </label>
+                <label className="full">
+                  Note interne Sorina
+                  <textarea rows="3" value={appointment.internal_notes} onChange={(event) => updateAppointment(index, 'internal_notes', event.target.value)} />
+                </label>
+              </div>
+              <div className="admin-row-actions">
+                <button type="button" onClick={() => saveAppointment(index)} disabled={isBusy}>
+                  <Save size={16} /> {isBusy ? 'Se salveaza...' : 'Salveaza'}
+                </button>
+                <button
+                  type="button"
+                  className="admin-secondary"
+                  onClick={() => updateAppointment(index, 'status', 'cancelled')}
+                  disabled={isBusy || appointment.status === 'cancelled'}
+                >
+                  Anuleaza
+                </button>
+              </div>
+            </article>
+          ))}
         </div>
       </section>
 

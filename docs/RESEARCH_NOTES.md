@@ -155,3 +155,27 @@ Applied decisions:
 - Validate the selected slot server-side and reject stale choices if another client booked the slot moments earlier.
 - Add a partial unique index on active appointments so the database also prevents two active bookings for the same date and time.
 - Keep slots configurable through `BOOKING_SLOT_TIMES`; the default can be adjusted once Sorina confirms her actual working rhythm.
+
+## 2026-07-02 Admin Appointments And Email Notifications
+
+Sources checked:
+
+- Resend pricing: https://resend.com/pricing
+- Resend Send Email API: https://resend.com/docs/api-reference/emails/send-email
+- Resend scheduled email docs: https://resend.com/docs/dashboard/emails/schedule-email
+- Resend cancel scheduled email API: https://resend.com/docs/api-reference/emails/cancel-email
+- Vercel Cron Jobs docs: https://vercel.com/docs/cron-jobs
+- Vercel Cron Jobs usage and pricing: https://vercel.com/docs/cron-jobs/usage-and-pricing
+- Supabase changelog index: https://supabase.com/changelog.md
+
+Applied decisions:
+
+- Keep appointment management inside the existing password-protected admin panel.
+- Let Sorina add manual appointments, move date/time, change status, and keep internal notes.
+- Keep the database as the source of truth for occupied slots; admin moves check the same active-slot conflict as public bookings.
+- Store notification preferences in `site_settings` under `notifications`.
+- Use Resend directly through its HTTP API, without adding a dependency.
+- Resend has a free tier suitable for small studio notifications, but production delivery still needs a real sender/domain setup.
+- Use Vercel Cron once per day for the "maine ai X programari" digest; this fits the free Hobby cron cadence.
+- Use Resend scheduled emails for one-hour reminders because Vercel Hobby cron is not precise enough for hourly checks.
+- When an appointment is moved or cancelled, cancel any existing scheduled reminder and create a fresh one only when the appointment remains active.

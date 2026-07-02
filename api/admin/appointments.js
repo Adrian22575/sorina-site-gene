@@ -1,0 +1,194 @@
+import crypto from 'node:crypto'
+import {
+  bookedTimesForDateExcept,
+  bookingSlots,
+  cleanString,
+  getSupabaseBookingConfig,
+  hasBookingConfig,
+  isValidDate,
+  normalizeTime,
+  sendJson,
+  supabaseBookingFetch,
+} from '../_booking.js'
+import {
+  isValidEmail,
+  normalizeNotificationSettings,
+  readNotificationSettings,
+  replaceAppointmentReminder,
+  saveNotificationSettings,
+} from '../_email.js'
+
+const statuses = new Set(['new', 'contacted', 'confirmed', 'cancelled'])
+const activeStatuses = new Set(['new', 'contacted', 'confirmed'])
+
+function safeEqual(left, right) {
+  const leftBuffer = Buffer.from(left)
+  const rightBuffer = Buffer.from(right)
+  return leftBuffer.length === rightBuffer.length && crypto.timingSafeEqual(leftBuffer, rightBuffer)
+}
+
+function isAuthorized(request) {
+  const expected = process.env.ADMIN_PASSWORD || ''
+  const received = request.headers['x-admin-password'] || ''
+  return Boolean(expected && received && safeEqual(received, expected))
+}
+
+async function readBody(request) {
+  if (typeof request.body === 'string') return JSON.parse(request.body || '{}')
+  if (typeof request.body === 'object' && request.body !== null) return request.body
+  return {}
+}
+
+function appointmentPayload(body, fallback = {}) {
+  const status = cleanString(body.status ?? fallback.status ?? 'new', 40)
+
+  return {
+    full_name: cleanString(body.full_name ?? fallback.full_name, 120),
+    phone: cleanString(body.phone ?? fallback.phone, 40),
+    email: cleanString(body.email ?? fallback.email, 160),
+    service: cleanString(body.service ?? fallback.service, 80),
+    preferred_date: cleanString(body.preferred_date ?? fallback.preferred_date, 20),
+    preferred_time: normalizeTime(body.preferred_time ?? fallback.preferred_time),
+    message: cleanString(body.message ?? fallback.message, 1200),
+    internal_notes: cleanString(body.internal_notes ?? fallback.internal_notes, 1200),
+    status: statuses.has(status) ? status : 'new',
+  }
+}
+
+function validateAppointment(payload) {
+  if (!payload.full_name) return 'Numele clientei este obligatoriu.'
+  if (!payload.phone) return 'Telefonul clientei este obligatoriu.'
+  if (!payload.service) return 'Serviciul este obligatoriu.'
+  if (!isValidDate(payload.preferred_date)) return 'Alege o data valida.'
+  if (!bookingSlots().includes(payload.preferred_time)) return 'Alege o ora din sloturile configurate.'
+  return ''
+}
+
+async function ensureAvailableSlot(config, payload, appointmentId = '') {
+  if (!activeStatuses.has(payload.status)) return
+
+  const bookedTimes = await bookedTimesForDateExcept(config, payload.preferred_date, appointmentId)
+  if (bookedTimes.has(payload.preferred_time)) {
+    const error = new Error('Acest interval este deja ocupat de alta clienta.')
+    error.status = 409
+    throw error
+  }
+}
+
+async function listAppointments(config) {
+  const result = await supabaseBookingFetch(
+    config,
+    'appointments?select=id,full_name,phone,email,service,preferred_date,preferred_time,message,status,source,internal_notes,created_at,updated_at&order=preferred_date.asc,preferred_time.asc,created_at.desc&limit=300',
+  )
+
+  if (!result.ok) throw new Error('Programarile nu au putut fi citite.')
+  return result.json()
+}
+
+async function createAppointment(config, body) {
+  const payload = appointmentPayload(body)
+  const validationError = validateAppointment(payload)
+  if (validationError) return { status: 400, error: validationError }
+
+  await ensureAvailableSlot(config, payload)
+
+  const result = await supabaseBookingFetch(config, 'appointments', {
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify({
+      ...payload,
+      source: 'admin',
+      user_agent: 'admin',
+    }),
+  })
+
+  if (!result.ok) return { status: result.status === 409 ? 409 : 400, error: 'Programarea nu a putut fi creata.' }
+
+  const appointment = (await result.json())[0]
+  await replaceAppointmentReminder(config, appointment)
+  return { status: 201, appointment }
+}
+
+async function readAppointment(config, id) {
+  const result = await supabaseBookingFetch(
+    config,
+    `appointments?id=eq.${encodeURIComponent(id)}&select=id,full_name,phone,email,service,preferred_date,preferred_time,message,status,source,internal_notes,created_at,updated_at`,
+  )
+
+  if (!result.ok) throw new Error('Programarea nu a putut fi citita.')
+  const rows = await result.json()
+  return rows[0] || null
+}
+
+async function updateAppointment(config, id, body) {
+  const current = await readAppointment(config, id)
+  if (!current) return { status: 404, error: 'Programarea nu exista.' }
+
+  const payload = appointmentPayload(body, current)
+  const validationError = validateAppointment(payload)
+  if (validationError) return { status: 400, error: validationError }
+
+  await ensureAvailableSlot(config, payload, id)
+
+  const result = await supabaseBookingFetch(config, `appointments?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify(payload),
+  })
+
+  if (!result.ok) return { status: result.status === 409 ? 409 : 400, error: 'Programarea nu a putut fi salvata.' }
+
+  const appointment = (await result.json())[0]
+  await replaceAppointmentReminder(config, appointment)
+  return { status: 200, appointment }
+}
+
+export default async function handler(request, response) {
+  if (!['GET', 'POST', 'PATCH'].includes(request.method)) {
+    response.setHeader('Allow', 'GET, POST, PATCH')
+    return sendJson(response, 405, { error: 'Metoda nu este permisa.' })
+  }
+
+  if (!isAuthorized(request)) {
+    return sendJson(response, 401, { error: 'Parola de admin nu este valida sau nu este configurata.' })
+  }
+
+  const config = getSupabaseBookingConfig()
+  if (!config) return sendJson(response, 503, { error: 'Supabase nu este configurat pentru programari.' })
+  if (!hasBookingConfig(config)) return sendJson(response, 503, { error: 'SUPABASE_SERVICE_ROLE_KEY nu este o cheie service_role valida.' })
+
+  try {
+    if (request.method === 'GET') {
+      return sendJson(response, 200, {
+        appointments: await listAppointments(config),
+        notifications: await readNotificationSettings(config),
+        slots: bookingSlots(),
+      })
+    }
+
+    const body = await readBody(request)
+
+    if (body.notifications) {
+      const notifications = normalizeNotificationSettings(body.notifications)
+      if (notifications.email && !isValidEmail(notifications.email)) {
+        return sendJson(response, 400, { error: 'Adresa de email pentru notificari nu este valida.' })
+      }
+
+      const savedSettings = await saveNotificationSettings(config, notifications)
+      return sendJson(response, 200, { notifications: savedSettings })
+    }
+
+    if (request.method === 'POST') {
+      const result = await createAppointment(config, body)
+      return sendJson(response, result.status, result.error ? { error: result.error } : { appointment: result.appointment })
+    }
+
+    const id = cleanString(request.query.id, 80)
+    if (!id) return sendJson(response, 400, { error: 'ID-ul programarii lipseste.' })
+
+    const result = await updateAppointment(config, id, body)
+    return sendJson(response, result.status, result.error ? { error: result.error } : { appointment: result.appointment })
+  } catch (error) {
+    return sendJson(response, error.status || 500, { error: error.message || 'A aparut o eroare.' })
+  }
+}

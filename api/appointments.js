@@ -12,6 +12,7 @@ import {
   supabaseBookingFetch,
   todayInBucharest,
 } from './_booking.js'
+import { replaceAppointmentReminder, sendNewAppointmentEmail } from './_email.js'
 
 const allowedMethods = ['GET', 'POST']
 const fallbackServices = [
@@ -128,7 +129,7 @@ export default async function handler(request, response) {
   const supabaseResponse = await supabaseBookingFetch(config, 'appointments', {
     method: 'POST',
     headers: {
-      Prefer: 'return=minimal',
+      Prefer: 'return=representation',
     },
     body: JSON.stringify(appointment),
   })
@@ -139,6 +140,12 @@ export default async function handler(request, response) {
     }
     return sendJson(response, 502, { error: 'Programarea nu a putut fi salvata.' })
   }
+
+  const savedAppointment = (await supabaseResponse.json())[0]
+  await Promise.allSettled([
+    sendNewAppointmentEmail(config, savedAppointment),
+    replaceAppointmentReminder(config, savedAppointment),
+  ])
 
   return sendJson(response, 200, { ok: true })
 }

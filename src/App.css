@@ -1154,6 +1154,34 @@ form button:disabled {
   box-shadow: inset 4px 0 0 var(--wine), 0 16px 42px rgba(45, 28, 18, 0.08);
 }
 
+.admin-appointment-settings {
+  background: #fbf8f4;
+  margin-bottom: 16px;
+}
+
+.admin-appointment-meta {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.admin-appointment-meta strong {
+  color: var(--wine);
+  font-size: 16px;
+}
+
+.admin-appointment-meta span {
+  background: #fbf8f4;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--soft-ink);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 7px 11px;
+}
+
 .admin-new-badge {
   align-self: start;
   background: var(--wine);

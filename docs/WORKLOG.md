@@ -238,3 +238,18 @@
 - Added optional `BOOKING_SLOT_TIMES` env support. Current default slots are hourly from 10:00 to 18:00 until Sorina confirms exact availability.
 - Added migration `202607020005_add_appointment_slot_uniqueness.sql` with a partial unique index for active appointment slots.
 - Applied the migration to the dedicated Sorina Supabase project `yjhkdmbdilzuwhwluico` after checking there were no existing duplicate active slots.
+
+## 2026-07-02 Admin Appointments And Email Notifications
+
+- Added migration `202607020006_add_appointment_admin_notifications.sql`:
+  - Adds `internal_notes` and `updated_at` to `public.appointments`.
+  - Creates `public.appointment_notifications` for notification logs.
+  - Keeps RLS enabled and revokes direct anon/authenticated table access.
+- Added admin API support for appointment list/create/update.
+- Added owner-editable notification settings in `site_settings.notifications`.
+- Added Resend-based email notifications:
+  - Immediate email when a new public appointment is saved.
+  - Scheduled one-hour-before reminder for active appointments.
+  - Cancellation/replacement of scheduled reminders when an admin moves or cancels an appointment.
+- Added a Vercel Cron endpoint for the daily "tomorrow appointments" digest, protected by `CRON_SECRET`.
+- Added `/admin` UI for managing client appointments, statuses, date/time moves, notes, and notification email settings.
