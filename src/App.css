@@ -483,6 +483,8 @@ p {
   background:
     linear-gradient(145deg, rgba(18, 16, 15, 0.55), rgba(68, 52, 46, 0.2)),
     linear-gradient(135deg, #4a3a35, #a88c80 55%, #f2ddd2);
+  clip-path: inset(0 calc(100% - var(--position)) 0 0);
+  z-index: 1;
 }
 
 .comparison-after {
@@ -490,7 +492,6 @@ p {
     linear-gradient(145deg, rgba(91, 7, 21, 0.28), rgba(255, 255, 255, 0.06)),
     radial-gradient(circle at 70% 28%, rgba(255, 255, 255, 0.75), transparent 22%),
     linear-gradient(135deg, #f7e8df, #d9b4a8 52%, #6b3a42);
-  clip-path: inset(0 calc(100% - var(--position)) 0 0);
 }
 
 .comparison-divider {
@@ -501,6 +502,7 @@ p {
   top: 0;
   transform: translateX(-50%);
   width: 2px;
+  z-index: 3;
 }
 
 .comparison-handle {
@@ -517,6 +519,7 @@ p {
   top: 50%;
   transform: translate(-50%, -50%);
   width: 42px;
+  z-index: 4;
 }
 
 .comparison-range {
@@ -526,6 +529,7 @@ p {
   pointer-events: none;
   position: absolute;
   width: 100%;
+  z-index: 5;
 }
 
 .comparison-caption {
