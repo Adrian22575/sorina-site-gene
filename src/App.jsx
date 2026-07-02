@@ -231,15 +231,15 @@ async function cropImageToSquare({ source, cropSize = 90, x = 50, y = 50, fileNa
 function cropMetrics(item) {
   const width = Number(item.crop_width) || 1
   const height = Number(item.crop_height) || 1
-  const cropSize = clamp(item.crop_size || 90, 35, 100)
+  const cropSize = clamp(item.crop_size ?? 90, 35, 100)
   const shortSide = Math.min(width, height)
   const cropPixels = shortSide * (cropSize / 100)
   const boxWidth = (cropPixels / width) * 100
   const boxHeight = (cropPixels / height) * 100
   const maxLeft = Math.max(0, 100 - boxWidth)
   const maxTop = Math.max(0, 100 - boxHeight)
-  const left = maxLeft * (clamp(item.crop_x || 50, 0, 100) / 100)
-  const top = maxTop * (clamp(item.crop_y || 50, 0, 100) / 100)
+  const left = maxLeft * (clamp(item.crop_x ?? 50, 0, 100) / 100)
+  const top = maxTop * (clamp(item.crop_y ?? 50, 0, 100) / 100)
 
   return {
     boxHeight,
@@ -292,8 +292,8 @@ function cropPixelMetrics(item, rect) {
   const boxHeight = (metrics.boxHeight / 100) * rect.height
   const maxLeft = Math.max(0, rect.width - boxWidth)
   const maxTop = Math.max(0, rect.height - boxHeight)
-  const left = maxLeft * (clamp(item.crop_x || 50, 0, 100) / 100)
-  const top = maxTop * (clamp(item.crop_y || 50, 0, 100) / 100)
+  const left = maxLeft * (clamp(item.crop_x ?? 50, 0, 100) / 100)
+  const top = maxTop * (clamp(item.crop_y ?? 50, 0, 100) / 100)
 
   return {
     boxHeight,
@@ -1202,7 +1202,7 @@ function AdminApp() {
                   type="range"
                   min="35"
                   max="100"
-                  value={item[`${side}_crop_size`] || 90}
+                  value={item[`${side}_crop_size`] ?? 90}
                   disabled={isBusy}
                   onChange={(event) => updateResultCrop(index, side, 'crop_size', event.target.value)}
                 />
@@ -1213,7 +1213,7 @@ function AdminApp() {
                   type="range"
                   min="0"
                   max="100"
-                  value={item[`${side}_crop_x`] || 50}
+                  value={item[`${side}_crop_x`] ?? 50}
                   disabled={isBusy}
                   onChange={(event) => updateResultCrop(index, side, 'crop_x', event.target.value)}
                 />
@@ -1224,7 +1224,7 @@ function AdminApp() {
                   type="range"
                   min="0"
                   max="100"
-                  value={item[`${side}_crop_y`] || 50}
+                  value={item[`${side}_crop_y`] ?? 50}
                   disabled={isBusy}
                   onChange={(event) => updateResultCrop(index, side, 'crop_y', event.target.value)}
                 />
@@ -1393,7 +1393,7 @@ function AdminApp() {
                           type="range"
                           min="35"
                           max="100"
-                          value={service.crop_size || 90}
+                          value={service.crop_size ?? 90}
                           disabled={isBusy}
                           onChange={(event) => updateServiceCrop(index, 'crop_size', event.target.value)}
                         />
@@ -1404,7 +1404,7 @@ function AdminApp() {
                           type="range"
                           min="0"
                           max="100"
-                          value={service.crop_x || 50}
+                          value={service.crop_x ?? 50}
                           disabled={isBusy}
                           onChange={(event) => updateServiceCrop(index, 'crop_x', event.target.value)}
                         />
@@ -1415,7 +1415,7 @@ function AdminApp() {
                           type="range"
                           min="0"
                           max="100"
-                          value={service.crop_y || 50}
+                          value={service.crop_y ?? 50}
                           disabled={isBusy}
                           onChange={(event) => updateServiceCrop(index, 'crop_y', event.target.value)}
                         />
@@ -1561,7 +1561,7 @@ function AdminApp() {
                           type="range"
                           min="35"
                           max="100"
-                          value={item.crop_size || 90}
+                          value={item.crop_size ?? 90}
                           disabled={isBusy}
                           onChange={(event) => updateGalleryCrop(index, 'crop_size', event.target.value)}
                         />
@@ -1572,7 +1572,7 @@ function AdminApp() {
                           type="range"
                           min="0"
                           max="100"
-                          value={item.crop_x || 50}
+                          value={item.crop_x ?? 50}
                           disabled={isBusy}
                           onChange={(event) => updateGalleryCrop(index, 'crop_x', event.target.value)}
                         />
@@ -1583,7 +1583,7 @@ function AdminApp() {
                           type="range"
                           min="0"
                           max="100"
-                          value={item.crop_y || 50}
+                          value={item.crop_y ?? 50}
                           disabled={isBusy}
                           onChange={(event) => updateGalleryCrop(index, 'crop_y', event.target.value)}
                         />
