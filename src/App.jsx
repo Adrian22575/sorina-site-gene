@@ -282,6 +282,10 @@ function BeforeAfterCard({ item }) {
   )
 }
 
+function AdminNewBadge() {
+  return <span className="admin-new-badge">Nou, nesalvat</span>
+}
+
 function AdminApp() {
   const [password, setPassword] = useState(() => window.sessionStorage.getItem('sorina_admin_password') || '')
   const [draftPassword, setDraftPassword] = useState('')
@@ -694,7 +698,8 @@ function AdminApp() {
 
         <div className="admin-service-list">
           {services.map((service, index) => (
-            <article className="admin-service" key={service.id || `new-${index}`}>
+            <article className={`admin-service ${service.id ? '' : 'admin-service-new'}`} key={service.id || `new-${index}`}>
+              {!service.id ? <AdminNewBadge /> : null}
               <div className="admin-service-grid">
                 <label>
                   Nume serviciu
@@ -782,7 +787,8 @@ function AdminApp() {
         </div>
         <div className="admin-service-list">
           {content.gallery.map((item, index) => (
-            <article className="admin-service" key={item.id || `gallery-${index}`}>
+            <article className={`admin-service ${item.id ? '' : 'admin-service-new'}`} key={item.id || `gallery-${index}`}>
+              {!item.id ? <AdminNewBadge /> : null}
               <div className="admin-service-grid">
                 <label>
                   Titlu
@@ -832,7 +838,8 @@ function AdminApp() {
         </div>
         <div className="admin-service-list">
           {content.reviews.map((item, index) => (
-            <article className="admin-service" key={item.id || `review-${index}`}>
+            <article className={`admin-service ${item.id ? '' : 'admin-service-new'}`} key={item.id || `review-${index}`}>
+              {!item.id ? <AdminNewBadge /> : null}
               <div className="admin-service-grid">
                 <label>
                   Nume clienta
@@ -873,7 +880,8 @@ function AdminApp() {
         </div>
         <div className="admin-service-list">
           {content.promotions.map((item, index) => (
-            <article className="admin-service" key={item.id || `promotion-${index}`}>
+            <article className={`admin-service ${item.id ? '' : 'admin-service-new'}`} key={item.id || `promotion-${index}`}>
+              {!item.id ? <AdminNewBadge /> : null}
               <div className="admin-service-grid">
                 <label>
                   Eticheta
@@ -918,7 +926,8 @@ function AdminApp() {
         </div>
         <div className="admin-service-list">
           {content.faqs.map((item, index) => (
-            <article className="admin-service" key={item.id || `faq-${index}`}>
+            <article className={`admin-service ${item.id ? '' : 'admin-service-new'}`} key={item.id || `faq-${index}`}>
+              {!item.id ? <AdminNewBadge /> : null}
               <div className="admin-service-grid">
                 <label className="full">
                   Intrebare
