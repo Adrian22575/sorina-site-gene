@@ -137,3 +137,21 @@ Applied decisions:
 - Generate more descriptive upload filenames from section and title instead of relying on camera filenames like `IMG_1234`.
 - Add dynamic JSON-LD from the current API content, while skipping placeholder reviews so the site does not publish fake testimonials as structured data.
 - Keep the implementation on existing tables with small additive columns; no new CMS or public table access.
+
+## 2026-07-02 Booking Availability Pass
+
+Sources checked:
+
+- Nielsen Norman Group date-input UX guidance: https://www.nngroup.com/articles/date-input/
+- MDN date input reference: https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/date
+- MDN time input reference: https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/time
+- Supabase changelog index: https://supabase.com/changelog.md
+
+Applied decisions:
+
+- Keep native date input because browser/mobile date controls are familiar and normalize the value as `YYYY-MM-DD`.
+- Do not let visitors type any arbitrary time; show a controlled list of appointment slots.
+- Show occupied slots as disabled and marked `Blocat` so the visitor understands why they cannot choose that hour.
+- Validate the selected slot server-side and reject stale choices if another client booked the slot moments earlier.
+- Add a partial unique index on active appointments so the database also prevents two active bookings for the same date and time.
+- Keep slots configurable through `BOOKING_SLOT_TIMES`; the default can be adjusted once Sorina confirms her actual working rhythm.

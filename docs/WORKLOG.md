@@ -225,3 +225,16 @@
 - Confirmed crop uploads now use descriptive filenames based on section and title.
 - Added dynamic JSON-LD generated from the live API content for BeautySalon, services, FAQ, real reviews, and result images.
 - Kept placeholder reviews out of dynamic structured data.
+
+## 2026-07-02 Booking Availability Pass
+
+- Added shared booking helpers in `api/_booking.js`.
+- Extended `/api/appointments`:
+  - `GET /api/appointments?date=YYYY-MM-DD` returns visible appointment slots for that date.
+  - `POST /api/appointments` now requires a valid configured slot.
+  - Booked active slots return `409` instead of allowing a duplicate request.
+- Replaced the free time input in the public booking form with selectable slot buttons.
+- Occupied slots remain visible as `Blocat` and cannot be selected.
+- Added optional `BOOKING_SLOT_TIMES` env support. Current default slots are hourly from 10:00 to 18:00 until Sorina confirms exact availability.
+- Added migration `202607020005_add_appointment_slot_uniqueness.sql` with a partial unique index for active appointment slots.
+- Applied the migration to the dedicated Sorina Supabase project `yjhkdmbdilzuwhwluico` after checking there were no existing duplicate active slots.

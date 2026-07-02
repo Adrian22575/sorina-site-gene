@@ -749,6 +749,80 @@ textarea {
   line-height: 1.55;
 }
 
+.booking-slots {
+  background: #fbf8f4;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.booking-slots > span {
+  color: var(--soft-ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.slot-status {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.slot-status-error {
+  color: #9f1d35;
+}
+
+.booking-slot-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+form .booking-slot {
+  background: white;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  color: var(--wine);
+  display: grid;
+  gap: 3px;
+  justify-items: start;
+  min-height: 58px;
+  padding: 10px 12px;
+}
+
+form .booking-slot strong {
+  color: inherit;
+  font-size: 15px;
+}
+
+form .booking-slot small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+form .booking-slot-selected {
+  background: var(--wine);
+  border-color: var(--wine);
+  color: white;
+}
+
+form .booking-slot-selected small {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+form .booking-slot-booked {
+  background: #eee4dd;
+  color: #7f6d66;
+  cursor: not-allowed;
+  opacity: 1;
+  text-decoration: line-through;
+}
+
 form button {
   align-items: center;
   background: var(--wine);
@@ -987,6 +1061,13 @@ form button:disabled {
   font-size: 30px;
 }
 
+.admin-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
 .admin-shell button {
   align-items: center;
   background: var(--wine);
@@ -1019,6 +1100,38 @@ form button:disabled {
 .admin-row-actions .admin-danger {
   border-color: rgba(100, 16, 30, 0.28);
   color: #8a1226;
+}
+
+.admin-order-controls {
+  align-items: center;
+  background: #fbf8f4;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 10px 12px;
+}
+
+.admin-order-controls span {
+  color: var(--soft-ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-order-controls div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.admin-shell .admin-order-button {
+  background: white;
+  border: 1px solid var(--line-strong);
+  color: var(--wine);
+  min-height: 36px;
+  padding: 0 12px;
 }
 
 .admin-service-list {
@@ -1393,6 +1506,7 @@ form button:disabled {
   .service-grid,
   .comparison-grid,
   .gallery-grid,
+  .booking-slot-grid,
   form {
     grid-template-columns: 1fr;
   }
@@ -1451,5 +1565,22 @@ form button:disabled {
 
   .admin-global-status {
     bottom: 108px;
+  }
+
+  .admin-panel-header,
+  .admin-panel-actions,
+  .admin-order-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-panel-actions,
+  .admin-order-controls div {
+    justify-content: stretch;
+  }
+
+  .admin-panel-actions button,
+  .admin-order-controls button {
+    width: 100%;
   }
 }

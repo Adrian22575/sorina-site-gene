@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   ArrowRight,
+  ArrowDown,
+  ArrowUp,
   AtSign,
   Award,
   CalendarDays,
@@ -133,6 +135,17 @@ const defaultResults = [
   { title: 'Volum delicat', before_image_url: '', after_image_url: '', before_alt_text: '', after_alt_text: '', caption: '', sort_order: 20, is_active: true },
   { title: 'Set intens', before_image_url: '', after_image_url: '', before_alt_text: '', after_alt_text: '', caption: '', sort_order: 30, is_active: true },
 ]
+
+function bucharestDateString(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    timeZone: 'Europe/Bucharest',
+    year: 'numeric',
+  }).formatToParts(date)
+  const part = (type) => parts.find((item) => item.type === type)?.value || ''
+  return `${part('year')}-${part('month')}-${part('day')}`
+}
 
 function slugify(value) {
   return value
@@ -651,6 +664,34 @@ function AdminSectionNavigator({ activeSection, onSectionSelect }) {
   )
 }
 
+function AdminOrderControls({ index, total, onMoveUp, onMoveDown, disabled = false }) {
+  return (
+    <div className="admin-order-controls full" aria-label={`Pozitie ${index + 1} din ${total}`}>
+      <span>Pozitia {index + 1} din {total}</span>
+      <div>
+        <button
+          type="button"
+          className="admin-order-button"
+          onClick={onMoveUp}
+          disabled={disabled || index === 0}
+          title="Muta mai sus"
+        >
+          <ArrowUp size={15} /> Sus
+        </button>
+        <button
+          type="button"
+          className="admin-order-button"
+          onClick={onMoveDown}
+          disabled={disabled || index === total - 1}
+          title="Muta mai jos"
+        >
+          <ArrowDown size={15} /> Jos
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function AdminApp() {
   const [password, setPassword] = useState(() => window.sessionStorage.getItem('sorina_admin_password') || '')
   const [draftPassword, setDraftPassword] = useState('')
@@ -825,6 +866,33 @@ function AdminApp() {
     }))
   }
 
+  function reindexItems(items) {
+    return items.map((item, index) => ({ ...item, sort_order: (index + 1) * 10 }))
+  }
+
+  function moveItem(items, index, direction) {
+    const nextIndex = index + direction
+    if (nextIndex < 0 || nextIndex >= items.length) return items
+
+    const nextItems = [...items]
+    const [item] = nextItems.splice(index, 1)
+    nextItems.splice(nextIndex, 0, item)
+    return reindexItems(nextItems)
+  }
+
+  function moveService(index, direction) {
+    setServices((current) => moveItem(current, index, direction))
+    setStatus({ state: 'success', message: 'Ordinea serviciilor a fost schimbata. Apasa Salveaza ordinea ca sa ajunga pe site.' })
+  }
+
+  function moveContentItem(collection, index, direction) {
+    setContent((current) => ({
+      ...current,
+      [collection]: moveItem(current[collection], index, direction),
+    }))
+    setStatus({ state: 'success', message: 'Ordinea a fost schimbata. Apasa Salveaza ordinea ca sa ajunga pe site.' })
+  }
+
   function nextSortOrder(items) {
     return items.length ? Math.max(...items.map((item) => Number(item.sort_order) || 0)) + 10 : 10
   }
@@ -930,6 +998,39 @@ function AdminApp() {
         )),
       }))
       setStatus({ state: 'success', message: 'Elementul a fost salvat.' })
+    } catch (error) {
+      setStatus({ state: 'error', message: error.message })
+    }
+  }
+
+  function hasPendingCollectionUpload(collection, item) {
+    if (collection === 'gallery') return hasPendingGalleryUpload(item)
+    if (collection === 'results') return hasPendingResultUpload(item)
+    return false
+  }
+
+  async function saveContentOrder(collection) {
+    const items = content[collection]
+    if (items.some((item) => !item.id)) {
+      setStatus({ state: 'error', message: 'Salveaza elementele noi inainte de a salva ordinea.' })
+      return
+    }
+    if (items.some((item) => hasPendingCollectionUpload(collection, item))) {
+      setStatus({ state: 'error', message: 'Salveaza imaginile selectate inainte de a salva ordinea.' })
+      return
+    }
+
+    setStatus({ state: 'loading', message: 'Se salveaza ordinea...' })
+
+    try {
+      await Promise.all(items.map((item) => adminRequest(
+        `/api/admin/content?type=${collection}&id=${encodeURIComponent(item.id)}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify(item),
+        },
+      )))
+      setStatus({ state: 'success', message: 'Ordinea a fost salvata pe site.' })
     } catch (error) {
       setStatus({ state: 'error', message: error.message })
     }
@@ -1077,6 +1178,10 @@ function AdminApp() {
     setStatus({ state: 'success', message: 'Crop-ul a fost anulat. Imaginea salvata ramane neschimbata.' })
   }
 
+  function hasPendingGalleryUpload(item) {
+    return Boolean(item.crop_source || item.image_data || item.image_url?.startsWith('data:'))
+  }
+
   async function setResultFile(index, side, file) {
     if (!file) return
     if (file.size > 10 * 1024 * 1024) {
@@ -1195,6 +1300,16 @@ function AdminApp() {
     setStatus({ state: 'success', message: 'Crop-ul a fost anulat. Imaginea rezultatului ramane neschimbata.' })
   }
 
+  function hasPendingResultUpload(item) {
+    return Boolean(
+      hasPendingResultCrop(item)
+      || item.before_image_data
+      || item.after_image_data
+      || item.before_image_url?.startsWith('data:')
+      || item.after_image_url?.startsWith('data:'),
+    )
+  }
+
   async function setServiceFile(index, file) {
     if (!file) return
     if (file.size > 10 * 1024 * 1024) {
@@ -1295,6 +1410,25 @@ function AdminApp() {
     setStatus({ state: 'success', message: 'Crop-ul a fost anulat. Imaginea serviciului ramane neschimbata.' })
   }
 
+  function hasPendingServiceUpload(service) {
+    return Boolean(service.crop_source || service.image_data || service.image_url?.startsWith('data:'))
+  }
+
+  function servicePayload(service) {
+    return {
+      title: service.title,
+      duration: service.duration,
+      price: service.price,
+      note: service.note,
+      image_url: service.image_url,
+      image_alt_text: service.image_alt_text,
+      image_data: service.image_data,
+      image_name: service.image_name,
+      sort_order: service.sort_order,
+      is_active: service.is_active,
+    }
+  }
+
   function addService() {
     const nextService = {
       id: null,
@@ -1315,6 +1449,32 @@ function AdminApp() {
     setStatus({ state: 'success', message: 'Serviciu nou adaugat. Completeaza campurile si apasa Salveaza.' })
   }
 
+  async function saveServiceOrder() {
+    if (services.some((service) => !service.id)) {
+      setStatus({ state: 'error', message: 'Salveaza serviciile noi inainte de a salva ordinea.' })
+      return
+    }
+    if (services.some(hasPendingServiceUpload)) {
+      setStatus({ state: 'error', message: 'Salveaza imaginea selectata inainte de a salva ordinea.' })
+      return
+    }
+
+    setStatus({ state: 'loading', message: 'Se salveaza ordinea serviciilor...' })
+
+    try {
+      await Promise.all(services.map((service) => adminRequest(
+        `/api/admin/services?id=${encodeURIComponent(service.id)}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify(servicePayload(service)),
+        },
+      )))
+      setStatus({ state: 'success', message: 'Ordinea serviciilor a fost salvata pe site.' })
+    } catch (error) {
+      setStatus({ state: 'error', message: error.message })
+    }
+  }
+
   async function saveService(index) {
     const service = services[index]
     if (service.crop_source) {
@@ -1325,23 +1485,11 @@ function AdminApp() {
     setStatus({ state: 'loading', message: 'Se salveaza serviciul...' })
 
     try {
-      const payload = {
-        title: service.title,
-        duration: service.duration,
-        price: service.price,
-        note: service.note,
-        image_url: service.image_url,
-        image_alt_text: service.image_alt_text,
-        image_data: service.image_data,
-        image_name: service.image_name,
-        sort_order: service.sort_order,
-        is_active: service.is_active,
-      }
       const data = await adminRequest(
         service.id ? `/api/admin/services?id=${encodeURIComponent(service.id)}` : '/api/admin/services',
         {
           method: service.id ? 'PATCH' : 'POST',
-          body: JSON.stringify(payload),
+          body: JSON.stringify(servicePayload(service)),
         },
       )
       const saved = normalizeService(data.service)
@@ -1529,15 +1677,27 @@ function AdminApp() {
       <section className="admin-panel" id="admin-services">
         <div className="admin-panel-header">
           <h2>Lista servicii</h2>
-          <button type="button" onClick={addService} disabled={isBusy}>
-            <Plus size={16} /> Adauga serviciu
-          </button>
+          <div className="admin-panel-actions">
+            <button type="button" className="admin-secondary" onClick={saveServiceOrder} disabled={isBusy || !services.length}>
+              <Save size={16} /> Salveaza ordinea
+            </button>
+            <button type="button" onClick={addService} disabled={isBusy}>
+              <Plus size={16} /> Adauga serviciu
+            </button>
+          </div>
         </div>
 
         <div className="admin-service-list">
           {services.map((service, index) => (
             <article className={`admin-service ${service.id ? '' : 'admin-service-new'}`} key={service.id || `new-${index}`}>
               {!service.id ? <AdminNewBadge /> : null}
+              <AdminOrderControls
+                index={index}
+                total={services.length}
+                onMoveUp={() => moveService(index, -1)}
+                onMoveDown={() => moveService(index, 1)}
+                disabled={isBusy}
+              />
               <div className="admin-service-grid">
                 <label>
                   Nume serviciu
@@ -1550,14 +1710,6 @@ function AdminApp() {
                 <label>
                   Pret afisat
                   <input value={service.price} onChange={(event) => updateService(index, 'price', event.target.value)} />
-                </label>
-                <label>
-                  Ordine
-                  <input
-                    type="number"
-                    value={service.sort_order}
-                    onChange={(event) => updateService(index, 'sort_order', Number(event.target.value))}
-                  />
                 </label>
                 <label className="full">
                   Descriere
@@ -1718,22 +1870,30 @@ function AdminApp() {
       <section className="admin-panel" id="admin-gallery">
         <div className="admin-panel-header">
           <h2>Galerie foto</h2>
-          <button type="button" onClick={() => addContentItem('gallery')} disabled={isBusy}>
-            <Plus size={16} /> Adauga imagine
-          </button>
+          <div className="admin-panel-actions">
+            <button type="button" className="admin-secondary" onClick={() => saveContentOrder('gallery')} disabled={isBusy || !content.gallery.length}>
+              <Save size={16} /> Salveaza ordinea
+            </button>
+            <button type="button" onClick={() => addContentItem('gallery')} disabled={isBusy}>
+              <Plus size={16} /> Adauga imagine
+            </button>
+          </div>
         </div>
         <div className="admin-service-list">
           {content.gallery.map((item, index) => (
             <article className={`admin-service ${item.id ? '' : 'admin-service-new'}`} key={item.id || `gallery-${index}`}>
               {!item.id ? <AdminNewBadge /> : null}
+              <AdminOrderControls
+                index={index}
+                total={content.gallery.length}
+                onMoveUp={() => moveContentItem('gallery', index, -1)}
+                onMoveDown={() => moveContentItem('gallery', index, 1)}
+                disabled={isBusy}
+              />
               <div className="admin-service-grid">
                 <label>
                   Titlu
                   <input value={item.title} onChange={(event) => updateCollection('gallery', index, 'title', event.target.value)} />
-                </label>
-                <label>
-                  Ordine
-                  <input type="number" value={item.sort_order} onChange={(event) => updateCollection('gallery', index, 'sort_order', Number(event.target.value))} />
                 </label>
                 <label className="full">
                   Text alternativ
@@ -1847,22 +2007,30 @@ function AdminApp() {
       <section className="admin-panel" id="admin-results">
         <div className="admin-panel-header">
           <h2>Before/After</h2>
-          <button type="button" onClick={() => addContentItem('results')} disabled={isBusy}>
-            <Plus size={16} /> Adauga rezultat
-          </button>
+          <div className="admin-panel-actions">
+            <button type="button" className="admin-secondary" onClick={() => saveContentOrder('results')} disabled={isBusy || !content.results.length}>
+              <Save size={16} /> Salveaza ordinea
+            </button>
+            <button type="button" onClick={() => addContentItem('results')} disabled={isBusy}>
+              <Plus size={16} /> Adauga rezultat
+            </button>
+          </div>
         </div>
         <div className="admin-service-list">
           {content.results.map((item, index) => (
             <article className={`admin-service ${item.id ? '' : 'admin-service-new'}`} key={item.id || `result-${index}`}>
               {!item.id ? <AdminNewBadge /> : null}
+              <AdminOrderControls
+                index={index}
+                total={content.results.length}
+                onMoveUp={() => moveContentItem('results', index, -1)}
+                onMoveDown={() => moveContentItem('results', index, 1)}
+                disabled={isBusy}
+              />
               <div className="admin-service-grid">
                 <label>
                   Titlu rezultat
                   <input value={item.title} onChange={(event) => updateCollection('results', index, 'title', event.target.value)} />
-                </label>
-                <label>
-                  Ordine
-                  <input type="number" value={item.sort_order} onChange={(event) => updateCollection('results', index, 'sort_order', Number(event.target.value))} />
                 </label>
                 <label className="full">
                   Descriere scurta rezultat
@@ -1909,14 +2077,26 @@ function AdminApp() {
       <section className="admin-panel" id="admin-reviews">
         <div className="admin-panel-header">
           <h2>Recenzii</h2>
-          <button type="button" onClick={() => addContentItem('reviews')} disabled={isBusy}>
-            <Plus size={16} /> Adauga recenzie
-          </button>
+          <div className="admin-panel-actions">
+            <button type="button" className="admin-secondary" onClick={() => saveContentOrder('reviews')} disabled={isBusy || !content.reviews.length}>
+              <Save size={16} /> Salveaza ordinea
+            </button>
+            <button type="button" onClick={() => addContentItem('reviews')} disabled={isBusy}>
+              <Plus size={16} /> Adauga recenzie
+            </button>
+          </div>
         </div>
         <div className="admin-service-list">
           {content.reviews.map((item, index) => (
             <article className={`admin-service ${item.id ? '' : 'admin-service-new'}`} key={item.id || `review-${index}`}>
               {!item.id ? <AdminNewBadge /> : null}
+              <AdminOrderControls
+                index={index}
+                total={content.reviews.length}
+                onMoveUp={() => moveContentItem('reviews', index, -1)}
+                onMoveDown={() => moveContentItem('reviews', index, 1)}
+                disabled={isBusy}
+              />
               <div className="admin-service-grid">
                 <label>
                   Nume clienta
@@ -1925,10 +2105,6 @@ function AdminApp() {
                 <label>
                   Rating
                   <input type="number" min="1" max="5" value={item.rating} onChange={(event) => updateCollection('reviews', index, 'rating', Number(event.target.value))} />
-                </label>
-                <label>
-                  Ordine
-                  <input type="number" value={item.sort_order} onChange={(event) => updateCollection('reviews', index, 'sort_order', Number(event.target.value))} />
                 </label>
                 <label className="full">
                   Text recenzie
@@ -1951,14 +2127,26 @@ function AdminApp() {
       <section className="admin-panel" id="admin-promotions">
         <div className="admin-panel-header">
           <h2>Promotii</h2>
-          <button type="button" onClick={() => addContentItem('promotions')} disabled={isBusy}>
-            <Plus size={16} /> Adauga promotie
-          </button>
+          <div className="admin-panel-actions">
+            <button type="button" className="admin-secondary" onClick={() => saveContentOrder('promotions')} disabled={isBusy || !content.promotions.length}>
+              <Save size={16} /> Salveaza ordinea
+            </button>
+            <button type="button" onClick={() => addContentItem('promotions')} disabled={isBusy}>
+              <Plus size={16} /> Adauga promotie
+            </button>
+          </div>
         </div>
         <div className="admin-service-list">
           {content.promotions.map((item, index) => (
             <article className={`admin-service ${item.id ? '' : 'admin-service-new'}`} key={item.id || `promotion-${index}`}>
               {!item.id ? <AdminNewBadge /> : null}
+              <AdminOrderControls
+                index={index}
+                total={content.promotions.length}
+                onMoveUp={() => moveContentItem('promotions', index, -1)}
+                onMoveDown={() => moveContentItem('promotions', index, 1)}
+                disabled={isBusy}
+              />
               <div className="admin-service-grid">
                 <label>
                   Eticheta
@@ -1971,10 +2159,6 @@ function AdminApp() {
                 <label>
                   Buton
                   <input value={item.cta_label} onChange={(event) => updateCollection('promotions', index, 'cta_label', event.target.value)} />
-                </label>
-                <label>
-                  Ordine
-                  <input type="number" value={item.sort_order} onChange={(event) => updateCollection('promotions', index, 'sort_order', Number(event.target.value))} />
                 </label>
                 <label className="full">
                   Descriere
@@ -1997,22 +2181,30 @@ function AdminApp() {
       <section className="admin-panel" id="admin-faqs">
         <div className="admin-panel-header">
           <h2>FAQ</h2>
-          <button type="button" onClick={() => addContentItem('faqs')} disabled={isBusy}>
-            <Plus size={16} /> Adauga intrebare
-          </button>
+          <div className="admin-panel-actions">
+            <button type="button" className="admin-secondary" onClick={() => saveContentOrder('faqs')} disabled={isBusy || !content.faqs.length}>
+              <Save size={16} /> Salveaza ordinea
+            </button>
+            <button type="button" onClick={() => addContentItem('faqs')} disabled={isBusy}>
+              <Plus size={16} /> Adauga intrebare
+            </button>
+          </div>
         </div>
         <div className="admin-service-list">
           {content.faqs.map((item, index) => (
             <article className={`admin-service ${item.id ? '' : 'admin-service-new'}`} key={item.id || `faq-${index}`}>
               {!item.id ? <AdminNewBadge /> : null}
+              <AdminOrderControls
+                index={index}
+                total={content.faqs.length}
+                onMoveUp={() => moveContentItem('faqs', index, -1)}
+                onMoveDown={() => moveContentItem('faqs', index, 1)}
+                disabled={isBusy}
+              />
               <div className="admin-service-grid">
                 <label className="full">
                   Intrebare
                   <input value={item.question} onChange={(event) => updateCollection('faqs', index, 'question', event.target.value)} />
-                </label>
-                <label>
-                  Ordine
-                  <input type="number" value={item.sort_order} onChange={(event) => updateCollection('faqs', index, 'sort_order', Number(event.target.value))} />
                 </label>
                 <label className="admin-check">
                   <input type="checkbox" checked={item.is_active} onChange={(event) => updateCollection('faqs', index, 'is_active', event.target.checked)} />
@@ -2039,6 +2231,10 @@ function PublicApp() {
   const [serviceList, setServiceList] = useState(defaultServices)
   const [siteContent, setSiteContent] = useState(() => normalizeContent({}))
   const [bookingStatus, setBookingStatus] = useState({ state: 'idle', message: '' })
+  const [selectedDate, setSelectedDate] = useState('')
+  const [selectedTime, setSelectedTime] = useState('')
+  const [availability, setAvailability] = useState({ state: 'idle', message: '', slots: [] })
+  const minBookingDate = bucharestDateString()
 
   useEffect(() => {
     let isMounted = true
@@ -2066,6 +2262,50 @@ function PublicApp() {
   }, [])
 
   useEffect(() => {
+    if (!selectedDate) {
+      setAvailability({ state: 'idle', message: '', slots: [] })
+      setSelectedTime('')
+      return undefined
+    }
+
+    let isMounted = true
+    const controller = new AbortController()
+    setSelectedTime('')
+    setAvailability({ state: 'loading', message: 'Se incarca orele disponibile...', slots: [] })
+
+    async function loadAvailability() {
+      try {
+        const response = await fetch(`/api/appointments?date=${encodeURIComponent(selectedDate)}`, {
+          signal: controller.signal,
+        })
+        const data = await response.json().catch(() => ({}))
+        if (!response.ok) throw new Error(data.error || 'Orele disponibile nu au putut fi incarcate.')
+
+        if (isMounted) {
+          setAvailability({
+            state: 'success',
+            message: data.slots?.some((slot) => slot.is_available)
+              ? 'Alege una dintre orele disponibile.'
+              : 'Nu mai sunt ore disponibile in aceasta zi.',
+            slots: Array.isArray(data.slots) ? data.slots : [],
+          })
+        }
+      } catch (error) {
+        if (error.name === 'AbortError') return
+        if (isMounted) {
+          setAvailability({ state: 'error', message: error.message, slots: [] })
+        }
+      }
+    }
+
+    loadAvailability()
+    return () => {
+      isMounted = false
+      controller.abort()
+    }
+  }, [selectedDate])
+
+  useEffect(() => {
     upsertStructuredData(serviceList, siteContent)
   }, [serviceList, siteContent])
 
@@ -2074,6 +2314,11 @@ function PublicApp() {
 
   async function submitBooking(event) {
     event.preventDefault()
+    if (!selectedTime) {
+      setBookingStatus({ state: 'error', message: 'Alege o ora disponibila pentru programare.' })
+      return
+    }
+
     setBookingStatus({ state: 'loading', message: 'Se trimite cererea...' })
 
     const formData = new FormData(event.currentTarget)
@@ -2092,6 +2337,9 @@ function PublicApp() {
       }
 
       event.currentTarget.reset()
+      setSelectedDate('')
+      setSelectedTime('')
+      setAvailability({ state: 'idle', message: '', slots: [] })
       setBookingStatus({
         state: 'success',
         message: 'Cererea a fost trimisa. Sorina te va contacta pentru confirmare.',
@@ -2341,12 +2589,40 @@ function PublicApp() {
           </label>
           <label>
             Data preferata
-            <input name="preferred_date" type="date" required />
+            <input
+              name="preferred_date"
+              type="date"
+              min={minBookingDate}
+              value={selectedDate}
+              onChange={(event) => setSelectedDate(event.target.value)}
+              required
+            />
           </label>
-          <label>
-            Ora preferata
-            <input name="preferred_time" type="time" />
-          </label>
+          <div className="booking-slots full">
+            <span>Ora disponibila</span>
+            {availability.message ? (
+              <p className={`slot-status slot-status-${availability.state}`} role="status" aria-live="polite">
+                {availability.message}
+              </p>
+            ) : (
+              <p className="slot-status">Alege intai data preferata.</p>
+            )}
+            <div className="booking-slot-grid" aria-label="Ore disponibile pentru programare">
+              {availability.slots.map((slot) => (
+                <button
+                  type="button"
+                  className={`booking-slot ${slot.is_booked ? 'booking-slot-booked' : ''} ${selectedTime === slot.time ? 'booking-slot-selected' : ''}`}
+                  key={slot.time}
+                  disabled={!slot.is_available || bookingStatus.state === 'loading'}
+                  onClick={() => setSelectedTime(slot.time)}
+                >
+                  <strong>{slot.label}</strong>
+                  <small>{slot.is_booked ? 'Blocat' : 'Disponibil'}</small>
+                </button>
+              ))}
+            </div>
+            <input name="preferred_time" type="hidden" value={selectedTime} />
+          </div>
           <label>
             Adresa de email optionala
             <input name="email" type="email" autoComplete="email" />

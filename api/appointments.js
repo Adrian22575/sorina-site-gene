@@ -1,42 +1,25 @@
-const allowedMethods = ['POST']
+import {
+  availabilityForDate,
+  bookedTimesForDate,
+  bookingSlots,
+  cleanString,
+  getSupabaseBookingConfig,
+  hasBookingConfig,
+  isPastDate,
+  isValidDate,
+  normalizeTime,
+  sendJson,
+  supabaseBookingFetch,
+  todayInBucharest,
+} from './_booking.js'
+
+const allowedMethods = ['GET', 'POST']
 const fallbackServices = [
   'Efect natural',
   'Volum delicat',
   'Efect intens',
   'Laminare gene / sprancene',
 ]
-
-function sendJson(response, status, payload) {
-  response.statusCode = status
-  response.setHeader('Content-Type', 'application/json')
-  response.setHeader('Cache-Control', 'no-store')
-  response.end(JSON.stringify(payload))
-}
-
-function cleanString(value, maxLength) {
-  if (typeof value !== 'string') return ''
-  return value.trim().slice(0, maxLength)
-}
-
-function isValidDate(value) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value)
-}
-
-function isValidTime(value) {
-  return value === '' || /^\d{2}:\d{2}$/.test(value)
-}
-
-function readJwtRole(key) {
-  const parts = key.split('.')
-  if (parts.length < 2) return ''
-
-  try {
-    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'))
-    return typeof payload.role === 'string' ? payload.role : ''
-  } catch {
-    return ''
-  }
-}
 
 async function getAllowedServices(supabaseUrl, serviceRoleKey) {
   const endpoint = new URL(`${supabaseUrl.replace(/\/$/, '')}/rest/v1/site_services`)
@@ -64,16 +47,29 @@ export default async function handler(request, response) {
     return sendJson(response, 405, { error: 'Method not allowed' })
   }
 
-  const supabaseUrl = process.env.SUPABASE_URL
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const config = getSupabaseBookingConfig()
 
-  if (!supabaseUrl || !serviceRoleKey) {
+  if (!config) {
     return sendJson(response, 503, { error: 'Programarile nu sunt configurate inca.' })
   }
 
-  const keyRole = readJwtRole(serviceRoleKey)
-  if (keyRole && keyRole !== 'service_role') {
+  if (!hasBookingConfig(config)) {
     return sendJson(response, 503, { error: 'Programarile nu sunt configurate cu o cheie service_role valida.' })
+  }
+
+  if (request.method === 'GET') {
+    const date = cleanString(request.query.date, 20)
+    if (!isValidDate(date)) return sendJson(response, 400, { error: 'Alege o data valida.' })
+
+    try {
+      return sendJson(response, 200, {
+        date,
+        min_date: todayInBucharest(),
+        slots: await availabilityForDate(config, date),
+      })
+    } catch (error) {
+      return sendJson(response, 500, { error: error.message || 'Sloturile nu au putut fi incarcate.' })
+    }
   }
 
   let body = {}
@@ -97,7 +93,7 @@ export default async function handler(request, response) {
     email: cleanString(body.email, 160),
     service: cleanString(body.service, 80),
     preferred_date: cleanString(body.preferred_date, 20),
-    preferred_time: cleanString(body.preferred_time, 20),
+    preferred_time: normalizeTime(body.preferred_time),
     message: cleanString(body.message, 1200),
     source: 'website',
     user_agent: cleanString(request.headers['user-agent'] || '', 300),
@@ -107,32 +103,40 @@ export default async function handler(request, response) {
     return sendJson(response, 400, { error: 'Este nevoie de acordul pentru prelucrarea datelor de programare.' })
   }
 
-  if (!appointment.full_name || !appointment.phone || !appointment.service || !appointment.preferred_date) {
-    return sendJson(response, 400, { error: 'Completeaza numele, telefonul, serviciul si data preferata.' })
+  if (!appointment.full_name || !appointment.phone || !appointment.service || !appointment.preferred_date || !appointment.preferred_time) {
+    return sendJson(response, 400, { error: 'Completeaza numele, telefonul, serviciul, data si ora.' })
   }
 
-  const allowedServices = await getAllowedServices(supabaseUrl, serviceRoleKey)
+  const allowedServices = await getAllowedServices(config.baseUrl, config.serviceRoleKey)
   if (!allowedServices.has(appointment.service)) {
     return sendJson(response, 400, { error: 'Serviciul ales nu este valid.' })
   }
 
-  if (!isValidDate(appointment.preferred_date) || !isValidTime(appointment.preferred_time)) {
+  if (!isValidDate(appointment.preferred_date) || isPastDate(appointment.preferred_date)) {
     return sendJson(response, 400, { error: 'Data sau ora nu este valida.' })
   }
 
-  const endpoint = `${supabaseUrl.replace(/\/$/, '')}/rest/v1/appointments`
-  const supabaseResponse = await fetch(endpoint, {
+  if (!bookingSlots().includes(appointment.preferred_time)) {
+    return sendJson(response, 400, { error: 'Ora aleasa nu este disponibila pentru programari online.' })
+  }
+
+  const bookedTimes = await bookedTimesForDate(config, appointment.preferred_date)
+  if (bookedTimes.has(appointment.preferred_time)) {
+    return sendJson(response, 409, { error: 'Acest interval este deja blocat. Alege alta ora.' })
+  }
+
+  const supabaseResponse = await supabaseBookingFetch(config, 'appointments', {
     method: 'POST',
     headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
-      'Content-Type': 'application/json',
       Prefer: 'return=minimal',
     },
     body: JSON.stringify(appointment),
   })
 
   if (!supabaseResponse.ok) {
+    if (supabaseResponse.status === 409) {
+      return sendJson(response, 409, { error: 'Acest interval tocmai a fost ocupat. Alege alta ora.' })
+    }
     return sendJson(response, 502, { error: 'Programarea nu a putut fi salvata.' })
   }
 

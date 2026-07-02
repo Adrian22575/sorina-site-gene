@@ -31,11 +31,14 @@ Set these for Production, Preview, and Development:
 SUPABASE_URL
 SUPABASE_SERVICE_ROLE_KEY
 ADMIN_PASSWORD
+BOOKING_SLOT_TIMES
 ```
 
 The repo includes `.env.example` with names only.
 
 `ADMIN_PASSWORD` is the password Sorina uses at `/admin` to manage services. It must be stored only in Vercel/local env, never in Git.
+
+`BOOKING_SLOT_TIMES` is optional and controls public booking slots as comma-separated 24-hour times, for example `10:00,11:00,12:00,13:00,14:00,15:00,16:00,17:00,18:00`.
 
 ## Supabase Migration
 
@@ -50,9 +53,12 @@ supabase/migrations/202607020001_raise_gallery_upload_limit.sql
 supabase/migrations/202607020002_add_service_images.sql
 supabase/migrations/202607020003_create_before_after_results.sql
 supabase/migrations/202607020004_add_image_seo_fields.sql
+supabase/migrations/202607020005_add_appointment_slot_uniqueness.sql
 ```
 
 The appointment migration creates `public.appointments`, enables RLS, revokes `anon` and `authenticated` access, and expects inserts to go through the Vercel API using the server-side service role key.
+
+The appointment slot uniqueness migration prevents two active appointments from using the same date and time. Cancelled appointments free the slot again.
 
 The services migration creates `public.site_services`, enables RLS, and seeds the current Romanian service placeholders. Public reads and admin writes go through Vercel API routes using the server-side service role key.
 
@@ -79,6 +85,7 @@ Do not link or deploy this repository to that project. The Sorina site needs its
 1. Copy the Sorina Supabase project URL into the Sorina Vercel project as `SUPABASE_URL`.
 2. Copy the Sorina Supabase service role key into the Sorina Vercel project as `SUPABASE_SERVICE_ROLE_KEY`.
 3. Add a strong private password as `ADMIN_PASSWORD`.
+4. Optionally add `BOOKING_SLOT_TIMES` if Sorina wants different online booking hours than the default.
 4. Deploy after env vars are present, or let Git integration deploy automatically after push.
 5. Test `/admin`, edit a service, contact field, gallery image, review, promotion, and FAQ item.
 6. Confirm `public.site_services`, `public.site_settings`, `public.site_gallery`, `public.site_results`, `public.site_reviews`, `public.site_promotions`, and `public.site_faqs` update in Supabase.
@@ -94,6 +101,7 @@ vercel link --yes --scope adrian22575s-projects --project sorina-site-gene
 vercel env add SUPABASE_URL production preview development
 vercel env add SUPABASE_SERVICE_ROLE_KEY production preview development
 vercel env add ADMIN_PASSWORD production preview development
+vercel env add BOOKING_SLOT_TIMES production preview development
 ```
 
 Do not use `--project facultate` and do not run `vercel link` if the CLI proposes the `facultate` project.
@@ -134,9 +142,10 @@ Completed on 2026-07-01:
 - Project URL is `https://yjhkdmbdilzuwhwluico.supabase.co`.
 - Migration `add_service_images` applied to `yjhkdmbdilzuwhwluico`.
 - Migration `create_before_after_results` applied to `yjhkdmbdilzuwhwluico`.
+- Migration `add_appointment_slot_uniqueness` applied to `yjhkdmbdilzuwhwluico`.
 
 Still needed:
 
-- Add `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `ADMIN_PASSWORD` to the dedicated Vercel project `sorina-site-gene`.
+- Add `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_PASSWORD`, and optional `BOOKING_SLOT_TIMES` to the dedicated Vercel project `sorina-site-gene`.
 - The service role key is secret and should be copied from the Supabase dashboard; do not commit it.
 - If `/admin` reports that `SUPABASE_SERVICE_ROLE_KEY` is not a valid `service_role` key, replace the Vercel value with the real Supabase service role/secret key, then redeploy.
