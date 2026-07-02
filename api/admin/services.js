@@ -68,6 +68,7 @@ function servicePayload(body) {
   const priceLabel = cleanString(body.price || body.price_label, 80)
   const note = cleanString(body.note, 500)
   const imageUrl = cleanString(body.image_url, 900)
+  const imageAltText = cleanString(body.image_alt_text, 220)
   const sortOrder = Number.isFinite(Number(body.sort_order)) ? Number(body.sort_order) : 0
   const isActive = body.is_active === false || body.is_active === 'false' ? false : true
 
@@ -78,6 +79,7 @@ function servicePayload(body) {
     price_label: priceLabel || 'Pret de completat',
     note,
     image_url: imageUrl,
+    image_alt_text: imageAltText,
     sort_order: sortOrder,
     is_active: isActive,
   }
@@ -108,7 +110,7 @@ async function supabaseFetch(config, path, options = {}) {
 }
 
 async function listServices(config) {
-  const endpoint = 'site_services?select=id,title,slug,duration,price_label,note,image_url,sort_order,is_active&order=sort_order.asc,title.asc'
+  const endpoint = 'site_services?select=id,title,slug,duration,price_label,note,image_url,image_alt_text,sort_order,is_active&order=sort_order.asc,title.asc'
   const result = await supabaseFetch(config, endpoint)
 
   if (!result.ok) {

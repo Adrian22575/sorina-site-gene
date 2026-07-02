@@ -49,6 +49,7 @@ supabase/migrations/202607010004_create_editable_site_content.sql
 supabase/migrations/202607020001_raise_gallery_upload_limit.sql
 supabase/migrations/202607020002_add_service_images.sql
 supabase/migrations/202607020003_create_before_after_results.sql
+supabase/migrations/202607020004_add_image_seo_fields.sql
 ```
 
 The appointment migration creates `public.appointments`, enables RLS, revokes `anon` and `authenticated` access, and expects inserts to go through the Vercel API using the server-side service role key.
@@ -58,6 +59,8 @@ The services migration creates `public.site_services`, enables RLS, and seeds th
 The service image migration adds `image_url` to `public.site_services` so owner-uploaded service card images can be shown on the public site.
 
 The before/after results migration creates `public.site_results`, enables RLS, and stores the editable comparison image pairs.
+
+The image SEO fields migration adds owner-editable alt/caption fields for service images and before/after result images.
 
 The editable content migration creates settings, gallery, reviews, promotions, FAQ tables, and the `site-gallery` storage bucket. These tables also keep RLS enabled and are accessed only through Vercel API routes.
 

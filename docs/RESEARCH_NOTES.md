@@ -120,3 +120,20 @@ Applied decisions:
 - Use separate tables for gallery, reviews, promotions, and FAQ so each section can be ordered, hidden, edited, or deleted independently.
 - Store gallery uploads in a dedicated public Supabase Storage bucket named `site-gallery`; uploads are accepted only through the protected admin API.
 - Keep all visible fallback copy in Romanian and avoid inventing real contact details, reviews, prices, or claims.
+
+## 2026-07-02 Editable Content SEO / AI SEO Pass
+
+Sources checked:
+
+- Google AI optimization guide: https://developers.google.com/search/docs/fundamentals/ai-optimization-guide
+- Google JavaScript SEO basics: https://developers.google.com/search/docs/crawling-indexing/javascript/javascript-seo-basics
+- Google image SEO best practices: https://developers.google.com/search/docs/appearance/google-images
+- Supabase changelog index: https://supabase.com/changelog.md
+
+Applied decisions:
+
+- Treat "AI SEO" as strong normal SEO: useful visible content, crawlable structure, image context, and structured data.
+- Add owner-editable image context where it was missing: service image alt text and before/after alt/caption fields.
+- Generate more descriptive upload filenames from section and title instead of relying on camera filenames like `IMG_1234`.
+- Add dynamic JSON-LD from the current API content, while skipping placeholder reviews so the site does not publish fake testimonials as structured data.
+- Keep the implementation on existing tables with small additive columns; no new CMS or public table access.

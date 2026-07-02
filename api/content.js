@@ -45,6 +45,7 @@ function mapService(row) {
     price: row.price_label,
     note: row.note,
     image_url: row.image_url,
+    image_alt_text: row.image_alt_text,
     isActive: row.is_active,
     sort_order: row.sort_order,
   }
@@ -52,7 +53,7 @@ function mapService(row) {
 
 async function listServices(config) {
   const endpoint = new URL(`${config.baseUrl}/rest/v1/site_services`)
-  endpoint.searchParams.set('select', 'id,title,duration,price_label,note,image_url,is_active,sort_order')
+  endpoint.searchParams.set('select', 'id,title,duration,price_label,note,image_url,image_alt_text,is_active,sort_order')
   endpoint.searchParams.set('is_active', 'eq.true')
   endpoint.searchParams.set('order', 'sort_order.asc,title.asc')
 

@@ -18,9 +18,9 @@ export const fallbackContent = {
     { title: 'Rezultat final', image_url: '', alt_text: 'Rezultat final' },
   ],
   results: [
-    { title: 'Ridicare naturala', before_image_url: '', after_image_url: '', sort_order: 10, is_active: true },
-    { title: 'Volum delicat', before_image_url: '', after_image_url: '', sort_order: 20, is_active: true },
-    { title: 'Set intens', before_image_url: '', after_image_url: '', sort_order: 30, is_active: true },
+    { title: 'Ridicare naturala', before_image_url: '', after_image_url: '', before_alt_text: '', after_alt_text: '', caption: '', sort_order: 10, is_active: true },
+    { title: 'Volum delicat', before_image_url: '', after_image_url: '', before_alt_text: '', after_alt_text: '', caption: '', sort_order: 20, is_active: true },
+    { title: 'Set intens', before_image_url: '', after_image_url: '', before_alt_text: '', after_alt_text: '', caption: '', sort_order: 30, is_active: true },
   ],
   reviews: [
     {
@@ -84,7 +84,7 @@ export const collectionConfig = {
   },
   results: {
     table: 'site_results',
-    select: 'id,title,before_image_url,after_image_url,sort_order,is_active',
+    select: 'id,title,before_image_url,after_image_url,before_alt_text,after_alt_text,caption,sort_order,is_active',
     order: 'sort_order.asc,title.asc',
   },
   promotions: {
@@ -239,6 +239,9 @@ export function itemPayload(type, body) {
       title: cleanString(body.title, 140),
       before_image_url: cleanString(body.before_image_url, 900),
       after_image_url: cleanString(body.after_image_url, 900),
+      before_alt_text: cleanString(body.before_alt_text, 220),
+      after_alt_text: cleanString(body.after_alt_text, 220),
+      caption: cleanString(body.caption, 220),
     }
   }
 

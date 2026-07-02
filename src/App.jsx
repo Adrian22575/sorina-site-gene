@@ -129,9 +129,9 @@ const defaultPromotions = [
 ]
 
 const defaultResults = [
-  { title: 'Ridicare naturala', before_image_url: '', after_image_url: '', sort_order: 10, is_active: true },
-  { title: 'Volum delicat', before_image_url: '', after_image_url: '', sort_order: 20, is_active: true },
-  { title: 'Set intens', before_image_url: '', after_image_url: '', sort_order: 30, is_active: true },
+  { title: 'Ridicare naturala', before_image_url: '', after_image_url: '', before_alt_text: '', after_alt_text: '', caption: '', sort_order: 10, is_active: true },
+  { title: 'Volum delicat', before_image_url: '', after_image_url: '', before_alt_text: '', after_alt_text: '', caption: '', sort_order: 20, is_active: true },
+  { title: 'Set intens', before_image_url: '', after_image_url: '', before_alt_text: '', after_alt_text: '', caption: '', sort_order: 30, is_active: true },
 ]
 
 function slugify(value) {
@@ -143,6 +143,16 @@ function slugify(value) {
     .replace(/^-|-$/g, '')
 }
 
+function readableImageAlt(prefix, title) {
+  const cleanTitle = (title || '').trim()
+  return cleanTitle ? `${prefix} - ${cleanTitle}` : prefix
+}
+
+function seoFileName(prefix, title, fallbackName) {
+  const cleanTitle = slugify(title || fallbackName || prefix) || 'imagine'
+  return `${prefix}-${cleanTitle}.jpg`
+}
+
 function normalizeService(service) {
   return {
     id: service.id || null,
@@ -151,6 +161,7 @@ function normalizeService(service) {
     price: service.price || service.price_label || 'Pret de completat',
     note: service.note || '',
     image_url: service.image_url || '',
+    image_alt_text: service.image_alt_text || '',
     sort_order: Number.isFinite(Number(service.sort_order)) ? Number(service.sort_order) : 0,
     is_active: service.is_active !== false && service.isActive !== false,
   }
@@ -368,6 +379,130 @@ function adminApiPath(path) {
   return `${url.pathname}${url.search}`
 }
 
+function cleanSchemaText(value) {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function absoluteUrl(value) {
+  const cleanValue = cleanSchemaText(value)
+  if (!cleanValue || cleanValue.startsWith('data:')) return ''
+
+  try {
+    return new URL(cleanValue, window.location.origin).toString()
+  } catch {
+    return ''
+  }
+}
+
+function isPlaceholderText(value) {
+  return /de completat|dupa confirmare|dupa acordul/i.test(cleanSchemaText(value))
+}
+
+function buildStructuredData(services, content) {
+  const siteUrl = window.location.origin
+  const contact = content.contact || {}
+  const activeServices = services.filter((service) => cleanSchemaText(service.title))
+  const serviceNodes = activeServices.map((service) => ({
+    '@type': 'Service',
+    '@id': `${siteUrl}/#service-${slugify(service.title)}`,
+    name: service.title,
+    description: service.note || undefined,
+    image: absoluteUrl(service.image_url) || undefined,
+    provider: { '@id': `${siteUrl}/#business` },
+  }))
+  const faqNodes = content.faqs
+    .filter((item) => cleanSchemaText(item.question) && cleanSchemaText(item.answer))
+    .map((item) => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.answer,
+      },
+    }))
+  const reviewNodes = content.reviews
+    .filter((item) => (
+      cleanSchemaText(item.customer_name)
+      && cleanSchemaText(item.review_text)
+      && !isPlaceholderText(item.customer_name)
+      && !isPlaceholderText(item.review_text)
+    ))
+    .map((item) => ({
+      '@type': 'Review',
+      author: {
+        '@type': 'Person',
+        name: item.customer_name,
+      },
+      reviewBody: item.review_text,
+      reviewRating: {
+        '@type': 'Rating',
+        ratingValue: Math.min(5, Math.max(1, Number(item.rating) || 5)),
+        bestRating: 5,
+      },
+    }))
+  const imageUrls = [
+    ...activeServices.map((service) => absoluteUrl(service.image_url)),
+    ...content.gallery.map((item) => absoluteUrl(item.image_url)),
+    ...content.results.flatMap((item) => [absoluteUrl(item.before_image_url), absoluteUrl(item.after_image_url)]),
+  ].filter(Boolean)
+  const imageNodes = content.results
+    .flatMap((item) => [
+      {
+        url: absoluteUrl(item.before_image_url),
+        caption: item.before_alt_text || readableImageAlt('Inainte', item.title),
+      },
+      {
+        url: absoluteUrl(item.after_image_url),
+        caption: item.after_alt_text || readableImageAlt('Dupa', item.title),
+      },
+    ])
+    .filter((item) => item.url)
+    .map((item) => ({
+      '@type': 'ImageObject',
+      contentUrl: item.url,
+      caption: item.caption,
+    }))
+
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'BeautySalon',
+        '@id': `${siteUrl}/#business`,
+        name: 'Sorina - Studio de Gene',
+        url: siteUrl,
+        description: 'Studio de gene in Bucuresti pentru extensii de gene, laminare si rezultate personalizate.',
+        image: imageUrls.slice(0, 8),
+        areaServed: 'Bucuresti',
+        address: {
+          '@type': 'PostalAddress',
+          addressLocality: cleanSchemaText(contact.area) && !isPlaceholderText(contact.area) ? contact.area : 'Bucuresti',
+          addressCountry: 'RO',
+        },
+        makesOffer: serviceNodes.length ? serviceNodes.map((service) => ({ '@id': service['@id'] })) : undefined,
+        review: reviewNodes.length ? reviewNodes : undefined,
+        hasPart: imageNodes.length ? imageNodes : undefined,
+      },
+      ...serviceNodes,
+      ...(faqNodes.length ? [{
+        '@type': 'FAQPage',
+        '@id': `${siteUrl}/#faq-schema`,
+        mainEntity: faqNodes,
+      }] : []),
+    ],
+  }
+}
+
+function upsertStructuredData(services, content) {
+  const scriptId = 'sorina-dynamic-jsonld'
+  const existing = document.getElementById(scriptId)
+  const script = existing || document.createElement('script')
+  script.id = scriptId
+  script.type = 'application/ld+json'
+  script.textContent = JSON.stringify(buildStructuredData(services, content))
+  if (!existing) document.head.appendChild(script)
+}
+
 function Button({ children, href = '#booking', tone = 'dark' }) {
   return (
     <a className={`button button-${tone}`} href={href}>
@@ -397,7 +532,11 @@ function SectionIntro({ eyebrow, title, children, centered = false }) {
 function ServiceCard({ service }) {
   return (
     <article className="service-card" id={`service-${slugify(service.title)}`}>
-      <ImageSlot label={`Imagine pentru ${service.title}`} src={service.image_url} alt={`Rezultat pentru ${service.title}`} />
+      <ImageSlot
+        label={`Imagine pentru ${service.title}`}
+        src={service.image_url}
+        alt={service.image_alt_text || readableImageAlt('Rezultat extensii de gene', service.title)}
+      />
       <div className="service-body">
         <h3>{service.title}</h3>
         <p>{service.note}</p>
@@ -417,6 +556,8 @@ function BeforeAfterCard({ item }) {
   const [position, setPosition] = useState(50)
   const beforeLabel = item.before_label || 'Inainte'
   const afterLabel = item.after_label || 'Dupa'
+  const beforeAlt = item.before_alt_text || `${beforeLabel}: ${item.title}`
+  const afterAlt = item.after_alt_text || `${afterLabel}: ${item.title}`
 
   function updateFromRange(event) {
     setPosition(Number(event.target.value))
@@ -438,10 +579,10 @@ function BeforeAfterCard({ item }) {
         onPointerDown={updateFromPointer}
       >
         <div className="comparison-layer comparison-before">
-          {item.before_image_url ? <img src={item.before_image_url} alt={`${beforeLabel}: ${item.title}`} /> : null}
+          {item.before_image_url ? <img src={item.before_image_url} alt={beforeAlt} /> : null}
         </div>
         <div className="comparison-layer comparison-after">
-          {item.after_image_url ? <img src={item.after_image_url} alt={`${afterLabel}: ${item.title}`} /> : null}
+          {item.after_image_url ? <img src={item.after_image_url} alt={afterAlt} /> : null}
         </div>
         <span className="comparison-label comparison-label-before">{beforeLabel}</span>
         <span className="comparison-label comparison-label-after">{afterLabel}</span>
@@ -460,7 +601,7 @@ function BeforeAfterCard({ item }) {
       </div>
       <div className="comparison-caption">
         <strong>{item.title}</strong>
-        <span>Inainte / dupa</span>
+        <span>{item.caption || 'Inainte / dupa'}</span>
       </div>
     </article>
   )
@@ -703,6 +844,9 @@ function AdminApp() {
         title: 'Rezultat nou',
         before_image_url: '',
         after_image_url: '',
+        before_alt_text: '',
+        after_alt_text: '',
+        caption: '',
         sort_order: nextSortOrder(items),
         is_active: true,
       }),
@@ -883,7 +1027,7 @@ function AdminApp() {
         cropSize: item.crop_size,
         x: item.crop_x,
         y: item.crop_y,
-        fileName: item.crop_file_name,
+        fileName: seoFileName('galerie', item.title, item.crop_file_name),
       })
 
       setContent((current) => ({
@@ -1001,7 +1145,7 @@ function AdminApp() {
         cropSize: item[`${side}_crop_size`],
         x: item[`${side}_crop_x`],
         y: item[`${side}_crop_y`],
-        fileName: item[`${side}_crop_file_name`],
+        fileName: seoFileName(side === 'before' ? 'inainte' : 'dupa', item.title, item[`${side}_crop_file_name`]),
       })
 
       setContent((current) => ({
@@ -1107,7 +1251,7 @@ function AdminApp() {
         cropSize: service.crop_size,
         x: service.crop_x,
         y: service.crop_y,
-        fileName: service.crop_file_name,
+        fileName: seoFileName('serviciu', service.title, service.crop_file_name),
       })
 
       setServices((current) => current.map((currentService, itemIndex) => (
@@ -1159,6 +1303,7 @@ function AdminApp() {
       price: 'Pret de completat',
       note: '',
       image_url: '',
+      image_alt_text: '',
       sort_order: services.length ? Math.max(...services.map((service) => Number(service.sort_order) || 0)) + 10 : 10,
       is_active: true,
     }
@@ -1186,6 +1331,7 @@ function AdminApp() {
         price: service.price,
         note: service.note,
         image_url: service.image_url,
+        image_alt_text: service.image_alt_text,
         image_data: service.image_data,
         image_name: service.image_name,
         sort_order: service.sort_order,
@@ -1321,7 +1467,7 @@ function AdminApp() {
           </div>
         ) : imageUrl ? (
           <div className="admin-preview">
-            <img src={imageUrl} alt={`${label} pentru ${item.title || 'rezultat'}`} />
+            <img src={imageUrl} alt={item[`${side}_alt_text`] || `${label} pentru ${item.title || 'rezultat'}`} />
           </div>
         ) : null}
       </div>
@@ -1416,6 +1562,14 @@ function AdminApp() {
                 <label className="full">
                   Descriere
                   <textarea value={service.note} rows="3" onChange={(event) => updateService(index, 'note', event.target.value)} />
+                </label>
+                <label className="full">
+                  Text imagine pentru Google
+                  <input
+                    value={service.image_alt_text || ''}
+                    placeholder={readableImageAlt('Rezultat extensii de gene', service.title)}
+                    onChange={(event) => updateService(index, 'image_alt_text', event.target.value)}
+                  />
                 </label>
                 <div className="admin-image-link full">
                   <span>Imagine serviciu</span>
@@ -1710,6 +1864,30 @@ function AdminApp() {
                   Ordine
                   <input type="number" value={item.sort_order} onChange={(event) => updateCollection('results', index, 'sort_order', Number(event.target.value))} />
                 </label>
+                <label className="full">
+                  Descriere scurta rezultat
+                  <input
+                    value={item.caption || ''}
+                    placeholder="Ex: Efect natural, linie mai definita si privire mai luminoasa"
+                    onChange={(event) => updateCollection('results', index, 'caption', event.target.value)}
+                  />
+                </label>
+                <label className="full">
+                  Text Google pentru poza Inainte
+                  <input
+                    value={item.before_alt_text || ''}
+                    placeholder={readableImageAlt('Inainte', item.title)}
+                    onChange={(event) => updateCollection('results', index, 'before_alt_text', event.target.value)}
+                  />
+                </label>
+                <label className="full">
+                  Text Google pentru poza Dupa
+                  <input
+                    value={item.after_alt_text || ''}
+                    placeholder={readableImageAlt('Dupa', item.title)}
+                    onChange={(event) => updateCollection('results', index, 'after_alt_text', event.target.value)}
+                  />
+                </label>
                 <div className="admin-result-grid full">
                   {renderResultImageEditor(item, index, 'before', 'Inainte')}
                   {renderResultImageEditor(item, index, 'after', 'Dupa')}
@@ -1886,6 +2064,10 @@ function PublicApp() {
       isMounted = false
     }
   }, [])
+
+  useEffect(() => {
+    upsertStructuredData(serviceList, siteContent)
+  }, [serviceList, siteContent])
 
   const activePromotion = siteContent.promotions[0] || defaultPromotions[0]
   const contact = siteContent.contact

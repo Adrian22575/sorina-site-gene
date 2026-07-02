@@ -212,3 +212,16 @@
 - Applied the migration to the dedicated Sorina Supabase project `yjhkdmbdilzuwhwluico`.
 - Reused the existing 1:1 crop workflow for both the Inainte and Dupa images.
 - Connected the public results section to `site_results`, while preserving placeholder visuals until real images are uploaded.
+
+## 2026-07-02 Editable Content SEO Pass
+
+- Added migration `202607020004_add_image_seo_fields.sql`:
+  - Adds `image_alt_text` to `public.site_services`.
+  - Adds `before_alt_text`, `after_alt_text`, and `caption` to `public.site_results`.
+- Applied the migration to the dedicated Sorina Supabase project `yjhkdmbdilzuwhwluico`.
+- Verified the new columns exist in Supabase.
+- Added owner-editable SEO text fields in `/admin` for service images and before/after images.
+- Public service cards and before/after cards now prefer owner-provided alt text, with Romanian fallbacks.
+- Confirmed crop uploads now use descriptive filenames based on section and title.
+- Added dynamic JSON-LD generated from the live API content for BeautySalon, services, FAQ, real reviews, and result images.
+- Kept placeholder reviews out of dynamic structured data.
