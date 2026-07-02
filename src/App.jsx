@@ -286,13 +286,48 @@ function prefixedCropBoxStyle(item, prefix) {
   return cropBoxStyle(prefixedCropItem(item, prefix))
 }
 
-function cropPositionFromPointer(event, item) {
+function cropDragOffsetFromPointer(event, item) {
   const rect = event.currentTarget.getBoundingClientRect()
   const metrics = cropMetrics(item)
   const pointerLeft = ((event.clientX - rect.left) / rect.width) * 100
   const pointerTop = ((event.clientY - rect.top) / rect.height) * 100
-  const boxLeft = clamp(pointerLeft - metrics.boxWidth / 2, 0, metrics.maxLeft)
-  const boxTop = clamp(pointerTop - metrics.boxHeight / 2, 0, metrics.maxTop)
+  const isInsideBox = (
+    pointerLeft >= metrics.left
+    && pointerLeft <= metrics.left + metrics.boxWidth
+    && pointerTop >= metrics.top
+    && pointerTop <= metrics.top + metrics.boxHeight
+  )
+
+  return {
+    x: isInsideBox ? pointerLeft - metrics.left : metrics.boxWidth / 2,
+    y: isInsideBox ? pointerTop - metrics.top : metrics.boxHeight / 2,
+  }
+}
+
+function cropDragOffsetFromTarget(target, item) {
+  const metrics = cropMetrics(item)
+  const x = Number(target.dataset.cropOffsetX)
+  const y = Number(target.dataset.cropOffsetY)
+
+  return {
+    x: Number.isFinite(x) ? x : metrics.boxWidth / 2,
+    y: Number.isFinite(y) ? y : metrics.boxHeight / 2,
+  }
+}
+
+function storeCropDragOffset(target, offset) {
+  target.dataset.cropOffsetX = String(offset.x)
+  target.dataset.cropOffsetY = String(offset.y)
+}
+
+function cropPositionFromPointer(event, item, dragOffset = null) {
+  const rect = event.currentTarget.getBoundingClientRect()
+  const metrics = cropMetrics(item)
+  const pointerLeft = ((event.clientX - rect.left) / rect.width) * 100
+  const pointerTop = ((event.clientY - rect.top) / rect.height) * 100
+  const offset = dragOffset || cropDragOffsetFromTarget(event.currentTarget, item)
+  const boxLeft = clamp(pointerLeft - offset.x, 0, metrics.maxLeft)
+  const boxTop = clamp(pointerTop - offset.y, 0, metrics.maxTop)
 
   return {
     x: metrics.maxLeft ? (boxLeft / metrics.maxLeft) * 100 : 50,
@@ -1122,8 +1157,11 @@ function AdminApp() {
               onDragStart={(event) => event.preventDefault()}
               onPointerDown={(event) => {
                 event.preventDefault()
+                const cropItem = prefixedCropItem(item, side)
+                const dragOffset = cropDragOffsetFromPointer(event, cropItem)
+                storeCropDragOffset(event.currentTarget, dragOffset)
                 event.currentTarget.setPointerCapture(event.pointerId)
-                updateResultCropPosition(index, side, cropPositionFromPointer(event, prefixedCropItem(item, side)))
+                updateResultCropPosition(index, side, cropPositionFromPointer(event, cropItem, dragOffset))
               }}
               onPointerMove={(event) => {
                 if (event.buttons !== 1) return
@@ -1311,8 +1349,10 @@ function AdminApp() {
                       onDragStart={(event) => event.preventDefault()}
                       onPointerDown={(event) => {
                         event.preventDefault()
+                        const dragOffset = cropDragOffsetFromPointer(event, service)
+                        storeCropDragOffset(event.currentTarget, dragOffset)
                         event.currentTarget.setPointerCapture(event.pointerId)
-                        updateServiceCropPosition(index, cropPositionFromPointer(event, service))
+                        updateServiceCropPosition(index, cropPositionFromPointer(event, service, dragOffset))
                       }}
                       onPointerMove={(event) => {
                         if (event.buttons !== 1) return
@@ -1477,8 +1517,10 @@ function AdminApp() {
                       onDragStart={(event) => event.preventDefault()}
                       onPointerDown={(event) => {
                         event.preventDefault()
+                        const dragOffset = cropDragOffsetFromPointer(event, item)
+                        storeCropDragOffset(event.currentTarget, dragOffset)
                         event.currentTarget.setPointerCapture(event.pointerId)
-                        updateGalleryCropPosition(index, cropPositionFromPointer(event, item))
+                        updateGalleryCropPosition(index, cropPositionFromPointer(event, item, dragOffset))
                       }}
                       onPointerMove={(event) => {
                         if (event.buttons !== 1) return
