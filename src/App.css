@@ -894,8 +894,20 @@ form button:disabled {
 }
 
 .admin-global-status {
-  margin: 0 auto 18px;
-  max-width: 1120px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  bottom: 22px;
+  box-shadow: 0 16px 44px rgba(45, 28, 18, 0.16);
+  left: 50%;
+  margin: 0;
+  max-width: min(680px, calc(100vw - 32px));
+  padding: 12px 18px;
+  position: fixed;
+  text-align: center;
+  transform: translateX(-50%);
+  width: max-content;
+  z-index: 80;
 }
 
 .admin-panel-header {

@@ -181,6 +181,15 @@ function readFileAsDataUrl(file) {
   })
 }
 
+function adminApiPath(path) {
+  const shareToken = new URLSearchParams(window.location.search).get('_vercel_share')
+  if (!shareToken) return path
+
+  const url = new URL(path, window.location.origin)
+  url.searchParams.set('_vercel_share', shareToken)
+  return `${url.pathname}${url.search}`
+}
+
 function Button({ children, href = '#booking', tone = 'dark' }) {
   return (
     <a className={`button button-${tone}`} href={href}>
@@ -282,15 +291,17 @@ function AdminApp() {
   const isLoggedIn = Boolean(password)
 
   async function adminRequest(path, options = {}) {
-    const response = await fetch(path, {
+    const response = await fetch(adminApiPath(path), {
       ...options,
+      credentials: 'same-origin',
       headers: {
         'Content-Type': 'application/json',
         'x-admin-password': password,
         ...options.headers,
       },
     })
-    const data = await response.json().catch(() => ({}))
+    const contentType = response.headers.get('Content-Type') || ''
+    const data = contentType.includes('application/json') ? await response.json().catch(() => ({})) : {}
 
     if (!response.ok) {
       throw new Error(data.error || 'Actiunea nu a putut fi finalizata.')
@@ -325,21 +336,27 @@ function AdminApp() {
 
       try {
         const [serviceResponse, contentResponse] = await Promise.all([
-          fetch('/api/admin/services', {
+          fetch(adminApiPath('/api/admin/services'), {
+            credentials: 'same-origin',
             headers: {
               'Content-Type': 'application/json',
               'x-admin-password': password,
             },
           }),
-          fetch('/api/admin/content', {
+          fetch(adminApiPath('/api/admin/content'), {
+            credentials: 'same-origin',
             headers: {
               'Content-Type': 'application/json',
               'x-admin-password': password,
             },
           }),
         ])
-        const serviceData = await serviceResponse.json().catch(() => ({}))
-        const contentData = await contentResponse.json().catch(() => ({}))
+        const serviceData = (serviceResponse.headers.get('Content-Type') || '').includes('application/json')
+          ? await serviceResponse.json().catch(() => ({}))
+          : {}
+        const contentData = (contentResponse.headers.get('Content-Type') || '').includes('application/json')
+          ? await contentResponse.json().catch(() => ({}))
+          : {}
 
         if (!serviceResponse.ok) throw new Error(serviceData.error || 'Serviciile nu au putut fi incarcate.')
         if (!contentResponse.ok) throw new Error(contentData.error || 'Continutul nu a putut fi incarcat.')
@@ -438,10 +455,12 @@ function AdminApp() {
       }),
     }
 
+    const newItem = builders[collection](content[collection])
     setContent((current) => ({
       ...current,
-      [collection]: [...current[collection], builders[collection](current[collection])],
+      [collection]: [newItem, ...current[collection]],
     }))
+    setStatus({ state: 'success', message: 'Element nou adaugat. Completeaza campurile si apasa Salveaza.' })
   }
 
   async function saveContact() {
@@ -473,6 +492,7 @@ function AdminApp() {
           body: JSON.stringify(item),
         },
       )
+      if (!data.item) throw new Error('Serverul nu a returnat elementul salvat.')
       setContent((current) => ({
         ...current,
         [collection]: current[collection].map((currentItem, itemIndex) => (
@@ -541,18 +561,21 @@ function AdminApp() {
   }
 
   function addService() {
+    const nextService = {
+      id: null,
+      title: '',
+      duration: '',
+      price: 'Pret de completat',
+      note: '',
+      sort_order: services.length ? Math.max(...services.map((service) => Number(service.sort_order) || 0)) + 10 : 10,
+      is_active: true,
+    }
+
     setServices((current) => [
+      nextService,
       ...current,
-      {
-        id: null,
-        title: '',
-        duration: '',
-        price: 'Pret de completat',
-        note: '',
-        sort_order: current.length ? current.length * 10 + 10 : 10,
-        is_active: true,
-      },
     ])
+    setStatus({ state: 'success', message: 'Serviciu nou adaugat. Completeaza campurile si apasa Salveaza.' })
   }
 
   async function saveService(index) {
