@@ -177,3 +177,11 @@
 - Connected the public site to the new editable content collections.
 - Live verification showed Vercel points to the correct Supabase URL, but the stored `SUPABASE_SERVICE_ROLE_KEY` does not behave like a service role key under RLS.
 - Added runtime guards so admin and booking endpoints report an explicit service role key configuration error instead of returning empty content.
+
+## 2026-07-02 Gallery Admin UX Pass
+
+- Removed manual editing of gallery image URLs from `/admin`; the owner now sees whether an image is saved and can open the saved image link.
+- Kept image upload as the primary editing path for gallery items.
+- Disabled save/delete actions while an admin save/delete operation is processing.
+- Raised gallery upload limit from 4 MB to 10 MB in both API validation and Supabase Storage bucket `site-gallery`.
+- Applied migration `202607020001_raise_gallery_upload_limit.sql` to the dedicated Sorina Supabase project.

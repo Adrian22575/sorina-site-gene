@@ -939,6 +939,11 @@ form button:disabled {
   padding: 0 16px;
 }
 
+.admin-shell button:disabled {
+  cursor: wait;
+  opacity: 0.56;
+}
+
 .admin-actions button,
 .admin-row-actions button {
   background: #fbf8f4;
@@ -1018,6 +1023,30 @@ form button:disabled {
   display: block;
   object-fit: cover;
   width: 100%;
+}
+
+.admin-image-link {
+  background: #fbf8f4;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+}
+
+.admin-image-link span {
+  color: var(--soft-ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-image-link a,
+.admin-image-link p {
+  color: var(--wine);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 
 @media (hover: none) {

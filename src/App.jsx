@@ -293,6 +293,7 @@ function AdminApp() {
   const [content, setContent] = useState(() => normalizeContent({}))
   const [status, setStatus] = useState({ state: 'idle', message: '' })
   const isLoggedIn = Boolean(password)
+  const isBusy = status.state === 'loading'
 
   async function adminRequest(path, options = {}) {
     const response = await fetch(adminApiPath(path), {
@@ -537,8 +538,8 @@ function AdminApp() {
 
   async function setGalleryFile(index, file) {
     if (!file) return
-    if (file.size > 4 * 1024 * 1024) {
-      setStatus({ state: 'error', message: 'Imaginea trebuie sa fie sub 4 MB.' })
+    if (file.size > 10 * 1024 * 1024) {
+      setStatus({ state: 'error', message: 'Imaginea trebuie sa fie sub 10 MB.' })
       return
     }
 
@@ -673,7 +674,7 @@ function AdminApp() {
           </nav>
         </div>
         <div className="admin-actions">
-          <button type="button" onClick={loadAdminData}>
+          <button type="button" onClick={loadAdminData} disabled={isBusy}>
             <RefreshCcw size={16} /> Reincarca
           </button>
           <button type="button" onClick={logout}>
@@ -691,7 +692,7 @@ function AdminApp() {
       <section className="admin-panel" id="admin-services">
         <div className="admin-panel-header">
           <h2>Lista servicii</h2>
-          <button type="button" onClick={addService}>
+          <button type="button" onClick={addService} disabled={isBusy}>
             <Plus size={16} /> Adauga serviciu
           </button>
         </div>
@@ -735,10 +736,10 @@ function AdminApp() {
                 </label>
               </div>
               <div className="admin-row-actions">
-                <button type="button" onClick={() => saveService(index)}>
-                  <Save size={16} /> Salveaza
+                <button type="button" onClick={() => saveService(index)} disabled={isBusy}>
+                  <Save size={16} /> {isBusy ? 'Se salveaza...' : 'Salveaza'}
                 </button>
-                <button type="button" className="admin-danger" onClick={() => deleteService(index)}>
+                <button type="button" className="admin-danger" onClick={() => deleteService(index)} disabled={isBusy}>
                   <Trash2 size={16} /> Sterge
                 </button>
               </div>
@@ -750,8 +751,8 @@ function AdminApp() {
       <section className="admin-panel" id="admin-contact">
         <div className="admin-panel-header">
           <h2>Date contact/program</h2>
-          <button type="button" onClick={saveContact}>
-            <Save size={16} /> Salveaza
+          <button type="button" onClick={saveContact} disabled={isBusy}>
+            <Save size={16} /> {isBusy ? 'Se salveaza...' : 'Salveaza'}
           </button>
         </div>
         <div className="admin-service-grid">
@@ -781,7 +782,7 @@ function AdminApp() {
       <section className="admin-panel" id="admin-gallery">
         <div className="admin-panel-header">
           <h2>Galerie foto</h2>
-          <button type="button" onClick={() => addContentItem('gallery')}>
+          <button type="button" onClick={() => addContentItem('gallery')} disabled={isBusy}>
             <Plus size={16} /> Adauga imagine
           </button>
         </div>
@@ -802,13 +803,19 @@ function AdminApp() {
                   Text alternativ
                   <input value={item.alt_text || ''} onChange={(event) => updateCollection('gallery', index, 'alt_text', event.target.value)} />
                 </label>
-                <label className="full">
-                  URL imagine
-                  <input value={item.image_url || ''} onChange={(event) => updateCollection('gallery', index, 'image_url', event.target.value)} />
-                </label>
+                <div className="admin-image-link full">
+                  <span>Imagine salvata</span>
+                  {item.image_url?.startsWith('data:') ? (
+                    <p>Imagine selectata local. Se incarca dupa ce apesi Salveaza.</p>
+                  ) : item.image_url ? (
+                    <a href={item.image_url} target="_blank" rel="noreferrer">Deschide imaginea salvata</a>
+                  ) : (
+                    <p>Nicio imagine incarcata inca.</p>
+                  )}
+                </div>
                 <label className="full">
                   Upload imagine
-                  <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setGalleryFile(index, event.target.files?.[0])} />
+                  <input type="file" accept="image/jpeg,image/png,image/webp" disabled={isBusy} onChange={(event) => setGalleryFile(index, event.target.files?.[0])} />
                 </label>
                 {item.image_url ? (
                   <div className="admin-preview full">
@@ -821,8 +828,8 @@ function AdminApp() {
                 </label>
               </div>
               <div className="admin-row-actions">
-                <button type="button" onClick={() => saveContentItem('gallery', index)}><Save size={16} /> Salveaza</button>
-                <button type="button" className="admin-danger" onClick={() => deleteContentItem('gallery', index)}><Trash2 size={16} /> Sterge</button>
+                <button type="button" onClick={() => saveContentItem('gallery', index)} disabled={isBusy}><Save size={16} /> {isBusy ? 'Se salveaza...' : 'Salveaza'}</button>
+                <button type="button" className="admin-danger" onClick={() => deleteContentItem('gallery', index)} disabled={isBusy}><Trash2 size={16} /> Sterge</button>
               </div>
             </article>
           ))}
@@ -832,7 +839,7 @@ function AdminApp() {
       <section className="admin-panel" id="admin-reviews">
         <div className="admin-panel-header">
           <h2>Recenzii</h2>
-          <button type="button" onClick={() => addContentItem('reviews')}>
+          <button type="button" onClick={() => addContentItem('reviews')} disabled={isBusy}>
             <Plus size={16} /> Adauga recenzie
           </button>
         </div>
@@ -863,8 +870,8 @@ function AdminApp() {
                 </label>
               </div>
               <div className="admin-row-actions">
-                <button type="button" onClick={() => saveContentItem('reviews', index)}><Save size={16} /> Salveaza</button>
-                <button type="button" className="admin-danger" onClick={() => deleteContentItem('reviews', index)}><Trash2 size={16} /> Sterge</button>
+                <button type="button" onClick={() => saveContentItem('reviews', index)} disabled={isBusy}><Save size={16} /> {isBusy ? 'Se salveaza...' : 'Salveaza'}</button>
+                <button type="button" className="admin-danger" onClick={() => deleteContentItem('reviews', index)} disabled={isBusy}><Trash2 size={16} /> Sterge</button>
               </div>
             </article>
           ))}
@@ -874,7 +881,7 @@ function AdminApp() {
       <section className="admin-panel" id="admin-promotions">
         <div className="admin-panel-header">
           <h2>Promotii</h2>
-          <button type="button" onClick={() => addContentItem('promotions')}>
+          <button type="button" onClick={() => addContentItem('promotions')} disabled={isBusy}>
             <Plus size={16} /> Adauga promotie
           </button>
         </div>
@@ -909,8 +916,8 @@ function AdminApp() {
                 </label>
               </div>
               <div className="admin-row-actions">
-                <button type="button" onClick={() => saveContentItem('promotions', index)}><Save size={16} /> Salveaza</button>
-                <button type="button" className="admin-danger" onClick={() => deleteContentItem('promotions', index)}><Trash2 size={16} /> Sterge</button>
+                <button type="button" onClick={() => saveContentItem('promotions', index)} disabled={isBusy}><Save size={16} /> {isBusy ? 'Se salveaza...' : 'Salveaza'}</button>
+                <button type="button" className="admin-danger" onClick={() => deleteContentItem('promotions', index)} disabled={isBusy}><Trash2 size={16} /> Sterge</button>
               </div>
             </article>
           ))}
@@ -920,7 +927,7 @@ function AdminApp() {
       <section className="admin-panel" id="admin-faqs">
         <div className="admin-panel-header">
           <h2>FAQ</h2>
-          <button type="button" onClick={() => addContentItem('faqs')}>
+          <button type="button" onClick={() => addContentItem('faqs')} disabled={isBusy}>
             <Plus size={16} /> Adauga intrebare
           </button>
         </div>
@@ -947,8 +954,8 @@ function AdminApp() {
                 </label>
               </div>
               <div className="admin-row-actions">
-                <button type="button" onClick={() => saveContentItem('faqs', index)}><Save size={16} /> Salveaza</button>
-                <button type="button" className="admin-danger" onClick={() => deleteContentItem('faqs', index)}><Trash2 size={16} /> Sterge</button>
+                <button type="button" onClick={() => saveContentItem('faqs', index)} disabled={isBusy}><Save size={16} /> {isBusy ? 'Se salveaza...' : 'Salveaza'}</button>
+                <button type="button" className="admin-danger" onClick={() => deleteContentItem('faqs', index)} disabled={isBusy}><Trash2 size={16} /> Sterge</button>
               </div>
             </article>
           ))}

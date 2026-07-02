@@ -46,6 +46,7 @@ supabase/migrations/202607010001_create_appointments.sql
 supabase/migrations/202607010002_create_site_services.sql
 supabase/migrations/202607010003_fix_site_services_updated_at_search_path.sql
 supabase/migrations/202607010004_create_editable_site_content.sql
+supabase/migrations/202607020001_raise_gallery_upload_limit.sql
 ```
 
 The appointment migration creates `public.appointments`, enables RLS, revokes `anon` and `authenticated` access, and expects inserts to go through the Vercel API using the server-side service role key.
@@ -97,7 +98,7 @@ Do not use `--project facultate` and do not run `vercel link` if the CLI propose
 - `/api/appointments` returns `200` after env vars and Supabase table are configured.
 - `/api/content` returns fallback services if env vars are missing.
 - `/admin` loads the owner panel after `ADMIN_PASSWORD` is configured.
-- Gallery upload accepts JPG, PNG, and WEBP images under 4 MB.
+- Gallery upload accepts JPG, PNG, and WEBP images under 10 MB.
 - Supabase table has RLS enabled and no public insert policy.
 
 ## Supabase Verification
@@ -111,7 +112,7 @@ Completed on 2026-07-01:
 - `public.appointments` exists.
 - `public.site_services` exists and contains the current Romanian service placeholders.
 - Editable content tables exist and contain Romanian placeholders.
-- Storage bucket `site-gallery` exists, is public, and accepts JPG/PNG/WEBP files up to 4 MB.
+- Storage bucket `site-gallery` exists, is public, and accepts JPG/PNG/WEBP files up to 10 MB.
 - RLS is enabled on `public.appointments`.
 - RLS is enabled on `public.site_services`.
 - RLS is enabled on editable content tables.

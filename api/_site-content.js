@@ -262,7 +262,7 @@ export function contactPayload(body) {
 }
 
 export async function uploadGalleryImage(config, body) {
-  const dataUrl = cleanString(body.image_data, 7_000_000)
+  const dataUrl = cleanString(body.image_data, 15_000_000)
   if (!dataUrl) return ''
 
   const match = dataUrl.match(/^data:(image\/(?:jpeg|png|webp));base64,(.+)$/)
@@ -270,7 +270,7 @@ export async function uploadGalleryImage(config, body) {
 
   const [, mimeType, base64Data] = match
   const buffer = Buffer.from(base64Data, 'base64')
-  if (buffer.length > 4 * 1024 * 1024) throw new Error('Imaginea trebuie sa fie sub 4 MB.')
+  if (buffer.length > 10 * 1024 * 1024) throw new Error('Imaginea trebuie sa fie sub 10 MB.')
 
   const extension = mimeType.split('/')[1].replace('jpeg', 'jpg')
   const safeName = cleanString(body.image_name, 100).replace(/[^a-zA-Z0-9._-]/g, '-')
