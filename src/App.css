@@ -1053,6 +1053,7 @@ form button:disabled {
   max-width: 420px;
   overflow: hidden;
   position: relative;
+  user-select: none;
   touch-action: none;
   width: 100%;
 }
@@ -1062,6 +1063,7 @@ form button:disabled {
   height: 100%;
   object-fit: contain;
   pointer-events: none;
+  -webkit-user-drag: none;
   user-select: none;
   width: 100%;
 }

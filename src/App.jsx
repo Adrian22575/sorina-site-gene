@@ -1119,7 +1119,9 @@ function AdminApp() {
               className="admin-crop-frame"
               aria-label={`Preview crop patrat ${label}`}
               style={prefixedCropFrameStyle(item, side)}
+              onDragStart={(event) => event.preventDefault()}
               onPointerDown={(event) => {
+                event.preventDefault()
                 event.currentTarget.setPointerCapture(event.pointerId)
                 updateResultCropPosition(index, side, cropPositionFromPointer(event, prefixedCropItem(item, side)))
               }}
@@ -1131,6 +1133,7 @@ function AdminApp() {
               <img
                 src={cropSource}
                 alt={`${label} pentru ${item.title || 'rezultat'}`}
+                draggable="false"
               />
               <span className="admin-crop-box" style={prefixedCropBoxStyle(item, side)} />
             </div>
@@ -1305,7 +1308,9 @@ function AdminApp() {
                       className="admin-crop-frame"
                       aria-label="Preview crop patrat pentru serviciu"
                       style={cropFrameStyle(service)}
+                      onDragStart={(event) => event.preventDefault()}
                       onPointerDown={(event) => {
+                        event.preventDefault()
                         event.currentTarget.setPointerCapture(event.pointerId)
                         updateServiceCropPosition(index, cropPositionFromPointer(event, service))
                       }}
@@ -1317,6 +1322,7 @@ function AdminApp() {
                       <img
                         src={service.crop_source}
                         alt={service.title || 'Imagine serviciu pentru crop'}
+                        draggable="false"
                       />
                       <span className="admin-crop-box" style={cropBoxStyle(service)} />
                     </div>
@@ -1468,7 +1474,9 @@ function AdminApp() {
                       className="admin-crop-frame"
                       aria-label="Preview crop patrat"
                       style={cropFrameStyle(item)}
+                      onDragStart={(event) => event.preventDefault()}
                       onPointerDown={(event) => {
+                        event.preventDefault()
                         event.currentTarget.setPointerCapture(event.pointerId)
                         updateGalleryCropPosition(index, cropPositionFromPointer(event, item))
                       }}
@@ -1480,6 +1488,7 @@ function AdminApp() {
                       <img
                         src={item.crop_source}
                         alt={item.alt_text || item.title || 'Imagine pentru crop'}
+                        draggable="false"
                       />
                       <span className="admin-crop-box" style={cropBoxStyle(item)} />
                     </div>
