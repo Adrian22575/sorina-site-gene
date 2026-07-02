@@ -197,7 +197,11 @@ function loadImage(source) {
   })
 }
 
-async function cropImageToSquare({ source, scale = 1, x = 0, y = 0, fileName = 'galerie.jpg' }) {
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, Number(value) || 0))
+}
+
+async function cropImageToSquare({ source, cropSize = 90, x = 50, y = 50, fileName = 'galerie.jpg' }) {
   const image = await loadImage(source)
   const size = 1200
   const canvas = document.createElement('canvas')
@@ -209,17 +213,13 @@ async function cropImageToSquare({ source, scale = 1, x = 0, y = 0, fileName = '
   context.fillStyle = '#fbf8f4'
   context.fillRect(0, 0, size, size)
 
-  const imageAspect = image.naturalWidth / image.naturalHeight
-  const baseWidth = imageAspect >= 1 ? size * imageAspect : size
-  const baseHeight = imageAspect >= 1 ? size : size / imageAspect
-  const drawWidth = baseWidth * Math.max(1, Number(scale) || 1)
-  const drawHeight = baseHeight * Math.max(1, Number(scale) || 1)
-  const maxOffsetX = Math.max(0, (drawWidth - size) / 2)
-  const maxOffsetY = Math.max(0, (drawHeight - size) / 2)
-  const drawX = (size - drawWidth) / 2 + (Math.max(-100, Math.min(100, Number(x) || 0)) / 100) * maxOffsetX
-  const drawY = (size - drawHeight) / 2 + (Math.max(-100, Math.min(100, Number(y) || 0)) / 100) * maxOffsetY
+  const sourceSize = Math.min(image.naturalWidth, image.naturalHeight) * (clamp(cropSize, 35, 100) / 100)
+  const maxSourceX = Math.max(0, image.naturalWidth - sourceSize)
+  const maxSourceY = Math.max(0, image.naturalHeight - sourceSize)
+  const sourceX = maxSourceX * (clamp(x, 0, 100) / 100)
+  const sourceY = maxSourceY * (clamp(y, 0, 100) / 100)
 
-  context.drawImage(image, drawX, drawY, drawWidth, drawHeight)
+  context.drawImage(image, sourceX, sourceY, sourceSize, sourceSize, 0, 0, size, size)
 
   const baseName = fileName.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9._-]/g, '-') || 'galerie'
   return {
@@ -228,36 +228,76 @@ async function cropImageToSquare({ source, scale = 1, x = 0, y = 0, fileName = '
   }
 }
 
-function cropPreviewStyle(item) {
+function cropMetrics(item) {
   const width = Number(item.crop_width) || 1
   const height = Number(item.crop_height) || 1
-  const aspect = width / height
-  const scale = Math.max(1, Number(item.crop_scale) || 1)
-  const baseWidth = aspect >= 1 ? aspect * 100 : 100
-  const baseHeight = aspect >= 1 ? 100 : 100 / aspect
-  const drawWidth = baseWidth * scale
-  const drawHeight = baseHeight * scale
-  const maxOffsetX = Math.max(0, (drawWidth - 100) / 2)
-  const maxOffsetY = Math.max(0, (drawHeight - 100) / 2)
-  const x = Math.max(-100, Math.min(100, Number(item.crop_x) || 0))
-  const y = Math.max(-100, Math.min(100, Number(item.crop_y) || 0))
+  const cropSize = clamp(item.crop_size || 90, 35, 100)
+  const shortSide = Math.min(width, height)
+  const cropPixels = shortSide * (cropSize / 100)
+  const boxWidth = (cropPixels / width) * 100
+  const boxHeight = (cropPixels / height) * 100
+  const maxLeft = Math.max(0, 100 - boxWidth)
+  const maxTop = Math.max(0, 100 - boxHeight)
+  const left = maxLeft * (clamp(item.crop_x || 50, 0, 100) / 100)
+  const top = maxTop * (clamp(item.crop_y || 50, 0, 100) / 100)
 
   return {
-    height: `${drawHeight}%`,
-    left: `${(100 - drawWidth) / 2 + (x / 100) * maxOffsetX}%`,
-    top: `${(100 - drawHeight) / 2 + (y / 100) * maxOffsetY}%`,
-    width: `${drawWidth}%`,
+    boxHeight,
+    boxWidth,
+    height,
+    left,
+    maxLeft,
+    maxTop,
+    top,
+    width,
   }
 }
 
-function prefixedCropPreviewStyle(item, prefix) {
-  return cropPreviewStyle({
+function cropFrameStyle(item) {
+  const metrics = cropMetrics(item)
+  return { aspectRatio: `${metrics.width} / ${metrics.height}` }
+}
+
+function cropBoxStyle(item) {
+  const metrics = cropMetrics(item)
+  return {
+    height: `${metrics.boxHeight}%`,
+    left: `${metrics.left}%`,
+    top: `${metrics.top}%`,
+    width: `${metrics.boxWidth}%`,
+  }
+}
+
+function prefixedCropItem(item, prefix) {
+  return {
     crop_width: item[`${prefix}_crop_width`],
     crop_height: item[`${prefix}_crop_height`],
-    crop_scale: item[`${prefix}_crop_scale`],
+    crop_size: item[`${prefix}_crop_size`],
     crop_x: item[`${prefix}_crop_x`],
     crop_y: item[`${prefix}_crop_y`],
-  })
+  }
+}
+
+function prefixedCropFrameStyle(item, prefix) {
+  return cropFrameStyle(prefixedCropItem(item, prefix))
+}
+
+function prefixedCropBoxStyle(item, prefix) {
+  return cropBoxStyle(prefixedCropItem(item, prefix))
+}
+
+function cropPositionFromPointer(event, item) {
+  const rect = event.currentTarget.getBoundingClientRect()
+  const metrics = cropMetrics(item)
+  const pointerLeft = ((event.clientX - rect.left) / rect.width) * 100
+  const pointerTop = ((event.clientY - rect.top) / rect.height) * 100
+  const boxLeft = clamp(pointerLeft - metrics.boxWidth / 2, 0, metrics.maxLeft)
+  const boxTop = clamp(pointerTop - metrics.boxHeight / 2, 0, metrics.maxTop)
+
+  return {
+    x: metrics.maxLeft ? (boxLeft / metrics.maxLeft) * 100 : 50,
+    y: metrics.maxTop ? (boxTop / metrics.maxTop) * 100 : 50,
+  }
 }
 
 function hasPendingResultCrop(item) {
@@ -662,9 +702,9 @@ function AdminApp() {
                 crop_file_name: file.name,
                 crop_width: image.naturalWidth,
                 crop_height: image.naturalHeight,
-                crop_scale: 1,
-                crop_x: 0,
-                crop_y: 0,
+                crop_size: 90,
+                crop_x: 50,
+                crop_y: 50,
                 image_data: '',
                 image_name: '',
                 alt_text: item.alt_text || item.title,
@@ -687,6 +727,15 @@ function AdminApp() {
     }))
   }
 
+  function updateGalleryCropPosition(index, position) {
+    setContent((current) => ({
+      ...current,
+      gallery: current.gallery.map((item, itemIndex) => (
+        itemIndex === index ? { ...item, crop_x: position.x, crop_y: position.y } : item
+      )),
+    }))
+  }
+
   async function confirmGalleryCrop(index) {
     const item = content.gallery[index]
     if (!item?.crop_source) return
@@ -696,7 +745,7 @@ function AdminApp() {
     try {
       const cropped = await cropImageToSquare({
         source: item.crop_source,
-        scale: item.crop_scale,
+        cropSize: item.crop_size,
         x: item.crop_x,
         y: item.crop_y,
         fileName: item.crop_file_name,
@@ -712,9 +761,9 @@ function AdminApp() {
                 crop_file_name: '',
                 crop_width: 0,
                 crop_height: 0,
-                crop_scale: 1,
-                crop_x: 0,
-                crop_y: 0,
+                crop_size: 90,
+                crop_x: 50,
+                crop_y: 50,
                 image_data: cropped.dataUrl,
                 image_name: cropped.fileName,
                 image_url: cropped.dataUrl,
@@ -739,9 +788,9 @@ function AdminApp() {
               crop_file_name: '',
               crop_width: 0,
               crop_height: 0,
-              crop_scale: 1,
-              crop_x: 0,
-              crop_y: 0,
+              crop_size: 90,
+              crop_x: 50,
+              crop_y: 50,
             }
           : item
       )),
@@ -769,9 +818,9 @@ function AdminApp() {
                 [`${side}_crop_file_name`]: file.name,
                 [`${side}_crop_width`]: image.naturalWidth,
                 [`${side}_crop_height`]: image.naturalHeight,
-                [`${side}_crop_scale`]: 1,
-                [`${side}_crop_x`]: 0,
-                [`${side}_crop_y`]: 0,
+                [`${side}_crop_size`]: 90,
+                [`${side}_crop_x`]: 50,
+                [`${side}_crop_y`]: 50,
                 [`${side}_image_data`]: '',
                 [`${side}_image_name`]: '',
               }
@@ -793,6 +842,17 @@ function AdminApp() {
     }))
   }
 
+  function updateResultCropPosition(index, side, position) {
+    setContent((current) => ({
+      ...current,
+      results: current.results.map((item, itemIndex) => (
+        itemIndex === index
+          ? { ...item, [`${side}_crop_x`]: position.x, [`${side}_crop_y`]: position.y }
+          : item
+      )),
+    }))
+  }
+
   async function confirmResultCrop(index, side) {
     const item = content.results[index]
     const source = item?.[`${side}_crop_source`]
@@ -803,7 +863,7 @@ function AdminApp() {
     try {
       const cropped = await cropImageToSquare({
         source,
-        scale: item[`${side}_crop_scale`],
+        cropSize: item[`${side}_crop_size`],
         x: item[`${side}_crop_x`],
         y: item[`${side}_crop_y`],
         fileName: item[`${side}_crop_file_name`],
@@ -819,9 +879,9 @@ function AdminApp() {
                 [`${side}_crop_file_name`]: '',
                 [`${side}_crop_width`]: 0,
                 [`${side}_crop_height`]: 0,
-                [`${side}_crop_scale`]: 1,
-                [`${side}_crop_x`]: 0,
-                [`${side}_crop_y`]: 0,
+                [`${side}_crop_size`]: 90,
+                [`${side}_crop_x`]: 50,
+                [`${side}_crop_y`]: 50,
                 [`${side}_image_data`]: cropped.dataUrl,
                 [`${side}_image_name`]: cropped.fileName,
                 [`${side}_image_url`]: cropped.dataUrl,
@@ -846,9 +906,9 @@ function AdminApp() {
               [`${side}_crop_file_name`]: '',
               [`${side}_crop_width`]: 0,
               [`${side}_crop_height`]: 0,
-              [`${side}_crop_scale`]: 1,
-              [`${side}_crop_x`]: 0,
-              [`${side}_crop_y`]: 0,
+              [`${side}_crop_size`]: 90,
+              [`${side}_crop_x`]: 50,
+              [`${side}_crop_y`]: 50,
             }
           : item
       )),
@@ -874,9 +934,9 @@ function AdminApp() {
               crop_file_name: file.name,
               crop_width: image.naturalWidth,
               crop_height: image.naturalHeight,
-              crop_scale: 1,
-              crop_x: 0,
-              crop_y: 0,
+              crop_size: 90,
+              crop_x: 50,
+              crop_y: 50,
               image_data: '',
               image_name: '',
             }
@@ -894,6 +954,12 @@ function AdminApp() {
     )))
   }
 
+  function updateServiceCropPosition(index, position) {
+    setServices((current) => current.map((service, itemIndex) => (
+      itemIndex === index ? { ...service, crop_x: position.x, crop_y: position.y } : service
+    )))
+  }
+
   async function confirmServiceCrop(index) {
     const service = services[index]
     if (!service?.crop_source) return
@@ -903,7 +969,7 @@ function AdminApp() {
     try {
       const cropped = await cropImageToSquare({
         source: service.crop_source,
-        scale: service.crop_scale,
+        cropSize: service.crop_size,
         x: service.crop_x,
         y: service.crop_y,
         fileName: service.crop_file_name,
@@ -917,9 +983,9 @@ function AdminApp() {
               crop_file_name: '',
               crop_width: 0,
               crop_height: 0,
-              crop_scale: 1,
-              crop_x: 0,
-              crop_y: 0,
+              crop_size: 90,
+              crop_x: 50,
+              crop_y: 50,
               image_data: cropped.dataUrl,
               image_name: cropped.fileName,
               image_url: cropped.dataUrl,
@@ -941,9 +1007,9 @@ function AdminApp() {
             crop_file_name: '',
             crop_width: 0,
             crop_height: 0,
-            crop_scale: 1,
-            crop_x: 0,
-            crop_y: 0,
+            crop_size: 90,
+            crop_x: 50,
+            crop_y: 50,
           }
         : service
     )))
@@ -1049,33 +1115,44 @@ function AdminApp() {
         </label>
         {cropSource ? (
           <div className="admin-cropper admin-cropper-compact">
-            <div className="admin-crop-frame" aria-label={`Preview crop patrat ${label}`}>
+            <div
+              className="admin-crop-frame"
+              aria-label={`Preview crop patrat ${label}`}
+              style={prefixedCropFrameStyle(item, side)}
+              onPointerDown={(event) => {
+                event.currentTarget.setPointerCapture(event.pointerId)
+                updateResultCropPosition(index, side, cropPositionFromPointer(event, prefixedCropItem(item, side)))
+              }}
+              onPointerMove={(event) => {
+                if (event.buttons !== 1) return
+                updateResultCropPosition(index, side, cropPositionFromPointer(event, prefixedCropItem(item, side)))
+              }}
+            >
               <img
                 src={cropSource}
                 alt={`${label} pentru ${item.title || 'rezultat'}`}
-                style={prefixedCropPreviewStyle(item, side)}
               />
+              <span className="admin-crop-box" style={prefixedCropBoxStyle(item, side)} />
             </div>
             <div className="admin-crop-controls">
               <label>
-                Zoom
+                Marime crop
                 <input
                   type="range"
-                  min="1"
-                  max="2.5"
-                  step="0.05"
-                  value={item[`${side}_crop_scale`] || 1}
+                  min="35"
+                  max="100"
+                  value={item[`${side}_crop_size`] || 90}
                   disabled={isBusy}
-                  onChange={(event) => updateResultCrop(index, side, 'crop_scale', event.target.value)}
+                  onChange={(event) => updateResultCrop(index, side, 'crop_size', event.target.value)}
                 />
               </label>
               <label>
                 Orizontal
                 <input
                   type="range"
-                  min="-100"
+                  min="0"
                   max="100"
-                  value={item[`${side}_crop_x`] || 0}
+                  value={item[`${side}_crop_x`] || 50}
                   disabled={isBusy}
                   onChange={(event) => updateResultCrop(index, side, 'crop_x', event.target.value)}
                 />
@@ -1084,9 +1161,9 @@ function AdminApp() {
                 Vertical
                 <input
                   type="range"
-                  min="-100"
+                  min="0"
                   max="100"
-                  value={item[`${side}_crop_y`] || 0}
+                  value={item[`${side}_crop_y`] || 50}
                   disabled={isBusy}
                   onChange={(event) => updateResultCrop(index, side, 'crop_y', event.target.value)}
                 />
@@ -1224,33 +1301,44 @@ function AdminApp() {
                 </label>
                 {service.crop_source ? (
                   <div className="admin-cropper full">
-                    <div className="admin-crop-frame" aria-label="Preview crop patrat pentru serviciu">
+                    <div
+                      className="admin-crop-frame"
+                      aria-label="Preview crop patrat pentru serviciu"
+                      style={cropFrameStyle(service)}
+                      onPointerDown={(event) => {
+                        event.currentTarget.setPointerCapture(event.pointerId)
+                        updateServiceCropPosition(index, cropPositionFromPointer(event, service))
+                      }}
+                      onPointerMove={(event) => {
+                        if (event.buttons !== 1) return
+                        updateServiceCropPosition(index, cropPositionFromPointer(event, service))
+                      }}
+                    >
                       <img
                         src={service.crop_source}
                         alt={service.title || 'Imagine serviciu pentru crop'}
-                        style={cropPreviewStyle(service)}
                       />
+                      <span className="admin-crop-box" style={cropBoxStyle(service)} />
                     </div>
                     <div className="admin-crop-controls">
                       <label>
-                        Zoom
+                        Marime crop
                         <input
                           type="range"
-                          min="1"
-                          max="2.5"
-                          step="0.05"
-                          value={service.crop_scale || 1}
+                          min="35"
+                          max="100"
+                          value={service.crop_size || 90}
                           disabled={isBusy}
-                          onChange={(event) => updateServiceCrop(index, 'crop_scale', event.target.value)}
+                          onChange={(event) => updateServiceCrop(index, 'crop_size', event.target.value)}
                         />
                       </label>
                       <label>
                         Orizontal
                         <input
                           type="range"
-                          min="-100"
+                          min="0"
                           max="100"
-                          value={service.crop_x || 0}
+                          value={service.crop_x || 50}
                           disabled={isBusy}
                           onChange={(event) => updateServiceCrop(index, 'crop_x', event.target.value)}
                         />
@@ -1259,9 +1347,9 @@ function AdminApp() {
                         Vertical
                         <input
                           type="range"
-                          min="-100"
+                          min="0"
                           max="100"
-                          value={service.crop_y || 0}
+                          value={service.crop_y || 50}
                           disabled={isBusy}
                           onChange={(event) => updateServiceCrop(index, 'crop_y', event.target.value)}
                         />
@@ -1376,33 +1464,44 @@ function AdminApp() {
                 </label>
                 {item.crop_source ? (
                   <div className="admin-cropper full">
-                    <div className="admin-crop-frame" aria-label="Preview crop patrat">
+                    <div
+                      className="admin-crop-frame"
+                      aria-label="Preview crop patrat"
+                      style={cropFrameStyle(item)}
+                      onPointerDown={(event) => {
+                        event.currentTarget.setPointerCapture(event.pointerId)
+                        updateGalleryCropPosition(index, cropPositionFromPointer(event, item))
+                      }}
+                      onPointerMove={(event) => {
+                        if (event.buttons !== 1) return
+                        updateGalleryCropPosition(index, cropPositionFromPointer(event, item))
+                      }}
+                    >
                       <img
                         src={item.crop_source}
                         alt={item.alt_text || item.title || 'Imagine pentru crop'}
-                        style={cropPreviewStyle(item)}
                       />
+                      <span className="admin-crop-box" style={cropBoxStyle(item)} />
                     </div>
                     <div className="admin-crop-controls">
                       <label>
-                        Zoom
+                        Marime crop
                         <input
                           type="range"
-                          min="1"
-                          max="2.5"
-                          step="0.05"
-                          value={item.crop_scale || 1}
+                          min="35"
+                          max="100"
+                          value={item.crop_size || 90}
                           disabled={isBusy}
-                          onChange={(event) => updateGalleryCrop(index, 'crop_scale', event.target.value)}
+                          onChange={(event) => updateGalleryCrop(index, 'crop_size', event.target.value)}
                         />
                       </label>
                       <label>
                         Orizontal
                         <input
                           type="range"
-                          min="-100"
+                          min="0"
                           max="100"
-                          value={item.crop_x || 0}
+                          value={item.crop_x || 50}
                           disabled={isBusy}
                           onChange={(event) => updateGalleryCrop(index, 'crop_x', event.target.value)}
                         />
@@ -1411,9 +1510,9 @@ function AdminApp() {
                         Vertical
                         <input
                           type="range"
-                          min="-100"
+                          min="0"
                           max="100"
-                          value={item.crop_y || 0}
+                          value={item.crop_y || 50}
                           disabled={isBusy}
                           onChange={(event) => updateGalleryCrop(index, 'crop_y', event.target.value)}
                         />
