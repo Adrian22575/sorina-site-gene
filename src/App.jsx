@@ -10,6 +10,7 @@ import {
   ChevronDown,
   Clock,
   Crop,
+  ExternalLink,
   Gift,
   Heart,
   LogOut,
@@ -2035,6 +2036,9 @@ function AdminApp({ appointmentsOnly = false }) {
         <div className="admin-panel-header">
           <h2>Programari cliente</h2>
           <div className="admin-panel-actions">
+            <a className="admin-link-button" href="/email-previews.html" target="_blank" rel="noreferrer">
+              <ExternalLink size={16} /> Preview emailuri
+            </a>
             <button type="button" className="admin-secondary" onClick={saveNotificationSettings} disabled={isBusy}>
               <AtSign size={16} /> Salveaza notificari
             </button>
