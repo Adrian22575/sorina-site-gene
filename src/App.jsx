@@ -7,12 +7,15 @@ import {
   AtSign,
   Award,
   CalendarDays,
+  ChevronLeft,
   ChevronDown,
+  ChevronRight,
   Clock,
   Crop,
   ExternalLink,
   Gift,
   Heart,
+  ListChecks,
   LogOut,
   MapPin,
   Phone,
@@ -170,6 +173,21 @@ const appointmentStatusOptions = [
   { value: 'cancelled', label: 'Anulata' },
 ]
 
+const monthLabelFormatter = new Intl.DateTimeFormat('ro-RO', {
+  month: 'long',
+  year: 'numeric',
+})
+
+const weekdayFormatter = new Intl.DateTimeFormat('ro-RO', {
+  weekday: 'short',
+})
+
+const longDateFormatter = new Intl.DateTimeFormat('ro-RO', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+})
+
 function bucharestDateString(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-GB', {
     day: '2-digit',
@@ -179,6 +197,61 @@ function bucharestDateString(date = new Date()) {
   }).formatToParts(date)
   const part = (type) => parts.find((item) => item.type === type)?.value || ''
   return `${part('year')}-${part('month')}-${part('day')}`
+}
+
+function localDateFromString(value) {
+  const [year, month, day] = String(value || '').split('-').map(Number)
+  if (!year || !month || !day) return null
+  return new Date(year, month - 1, day)
+}
+
+function dateStringFromLocalDate(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+function monthKeyFromDate(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
+function addMonthsToKey(monthKey, amount) {
+  const [year, month] = monthKey.split('-').map(Number)
+  return monthKeyFromDate(new Date(year, month - 1 + amount, 1))
+}
+
+function calendarDaysForMonth(monthKey) {
+  const [year, month] = monthKey.split('-').map(Number)
+  const firstDate = new Date(year, month - 1, 1)
+  const mondayOffset = (firstDate.getDay() + 6) % 7
+  const startDate = new Date(year, month - 1, 1 - mondayOffset)
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(startDate)
+    date.setDate(startDate.getDate() + index)
+    return {
+      date,
+      key: dateStringFromLocalDate(date),
+      isCurrentMonth: date.getMonth() === month - 1,
+    }
+  })
+}
+
+function formatRomanianDate(value) {
+  const date = localDateFromString(value)
+  return date ? longDateFormatter.format(date) : 'Data lipsa'
+}
+
+function formatRomanianMonth(monthKey) {
+  const [year, month] = monthKey.split('-').map(Number)
+  return monthLabelFormatter.format(new Date(year, month - 1, 1))
+}
+
+function compareAppointments(first, second) {
+  return `${first.preferred_date || ''} ${first.preferred_time || ''} ${first.created_at || ''}`
+    .localeCompare(`${second.preferred_date || ''} ${second.preferred_time || ''} ${second.created_at || ''}`)
+}
+
+function appointmentStatusLabel(status) {
+  return appointmentStatusOptions.find((option) => option.value === status)?.label || status || 'Noua'
 }
 
 function slugify(value) {
@@ -774,6 +847,9 @@ function AdminApp({ appointmentsOnly = false }) {
   const [draftPassword, setDraftPassword] = useState('')
   const [services, setServices] = useState([])
   const [appointments, setAppointments] = useState([])
+  const [appointmentView, setAppointmentView] = useState('calendar')
+  const [calendarMonth, setCalendarMonth] = useState(() => monthKeyFromDate())
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState(() => bucharestDateString())
   const [notificationSettings, setNotificationSettings] = useState(defaultNotificationSettings)
   const [bookingSettings, setBookingSettings] = useState(defaultBookingSettings)
   const [adminSlots, setAdminSlots] = useState([])
@@ -1001,15 +1077,17 @@ function AdminApp({ appointmentsOnly = false }) {
   }
 
   function addAppointment() {
+    const preferredDate = appointmentView === 'calendar' ? selectedCalendarDate : bucharestDateString()
     setAppointments((current) => [
       normalizeAppointment({
         full_name: 'Clienta noua',
-        preferred_date: bucharestDateString(),
+        preferred_date: preferredDate,
         preferred_time: adminSlots[0] || '10:00',
         status: 'new',
       }),
       ...current,
     ])
+    setAppointmentView('list')
     setStatus({ state: 'success', message: 'Programare noua adaugata. Completeaza datele si apasa Salveaza.' })
   }
 
@@ -1879,6 +1957,19 @@ function AdminApp({ appointmentsOnly = false }) {
     )
   }
 
+  const sortedAppointments = [...appointments].sort(compareAppointments)
+  const appointmentsByDate = sortedAppointments.reduce((groups, appointment) => {
+    if (!appointment.preferred_date) return groups
+    const group = groups.get(appointment.preferred_date) || []
+    group.push(appointment)
+    groups.set(appointment.preferred_date, group)
+    return groups
+  }, new Map())
+  const calendarDays = calendarDaysForMonth(calendarMonth)
+  const selectedDayAppointments = appointmentsByDate.get(selectedCalendarDate) || []
+  const todayKey = bucharestDateString()
+  const weekdayLabels = calendarDays.slice(0, 7).map(({ date }) => weekdayFormatter.format(date))
+
   if (!isLoggedIn) {
     return (
       <main className="admin-shell">
@@ -2161,6 +2252,120 @@ function AdminApp({ appointmentsOnly = false }) {
           </div>
         </div>
 
+        <div className="admin-appointment-viewbar">
+          <div className="admin-view-switch" role="tablist" aria-label="Afisare programari">
+            <button
+              type="button"
+              className={appointmentView === 'calendar' ? 'admin-view-active' : ''}
+              onClick={() => setAppointmentView('calendar')}
+              role="tab"
+              aria-selected={appointmentView === 'calendar'}
+            >
+              <CalendarDays size={16} /> Calendar
+            </button>
+            <button
+              type="button"
+              className={appointmentView === 'list' ? 'admin-view-active' : ''}
+              onClick={() => setAppointmentView('list')}
+              role="tab"
+              aria-selected={appointmentView === 'list'}
+            >
+              <ListChecks size={16} /> Lista
+            </button>
+          </div>
+          <div className="admin-calendar-nav">
+            <button type="button" className="admin-secondary" onClick={() => setCalendarMonth((current) => addMonthsToKey(current, -1))} disabled={isBusy} aria-label="Luna anterioara">
+              <ChevronLeft size={16} />
+            </button>
+            <strong>{formatRomanianMonth(calendarMonth)}</strong>
+            <button type="button" className="admin-secondary" onClick={() => setCalendarMonth((current) => addMonthsToKey(current, 1))} disabled={isBusy} aria-label="Luna urmatoare">
+              <ChevronRight size={16} />
+            </button>
+            <button
+              type="button"
+              className="admin-secondary"
+              onClick={() => {
+                const today = bucharestDateString()
+                setCalendarMonth(monthKeyFromDate(localDateFromString(today)))
+                setSelectedCalendarDate(today)
+              }}
+              disabled={isBusy}
+            >
+              Azi
+            </button>
+          </div>
+        </div>
+
+        {appointmentView === 'calendar' ? (
+          <div className="admin-calendar-layout">
+            <div className="admin-calendar">
+              <div className="admin-calendar-weekdays">
+                {weekdayLabels.map((weekday) => <span key={weekday}>{weekday}</span>)}
+              </div>
+              <div className="admin-calendar-grid">
+                {calendarDays.map((day) => {
+                  const dayAppointments = appointmentsByDate.get(day.key) || []
+                  const isSelected = selectedCalendarDate === day.key
+                  const isToday = todayKey === day.key
+                  return (
+                    <button
+                      type="button"
+                      className={[
+                        'admin-calendar-day',
+                        day.isCurrentMonth ? '' : 'admin-calendar-day-muted',
+                        dayAppointments.length ? 'admin-calendar-day-filled' : '',
+                        isSelected ? 'admin-calendar-day-selected' : '',
+                        isToday ? 'admin-calendar-day-today' : '',
+                      ].filter(Boolean).join(' ')}
+                      key={day.key}
+                      onClick={() => {
+                        setSelectedCalendarDate(day.key)
+                        setCalendarMonth(monthKeyFromDate(day.date))
+                      }}
+                    >
+                      <span className="admin-calendar-date">
+                        {day.date.getDate()}
+                        {isToday ? <small>Azi</small> : null}
+                      </span>
+                      <span className="admin-calendar-items">
+                        {dayAppointments.slice(0, 3).map((appointment) => (
+                          <span className={`admin-calendar-item admin-calendar-item-${appointment.status}`} key={appointment.id || `${appointment.full_name}-${appointment.preferred_time}`}>
+                            <b>{appointment.preferred_time || '--:--'}</b>
+                            <em>{appointment.full_name || 'Clienta'}</em>
+                          </span>
+                        ))}
+                        {dayAppointments.length > 3 ? <span className="admin-calendar-more">+{dayAppointments.length - 3} programari</span> : null}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <aside className="admin-day-agenda">
+              <div>
+                <p className="eyebrow">Zi selectata</p>
+                <h3>{formatRomanianDate(selectedCalendarDate)}</h3>
+                <span>{selectedDayAppointments.length ? `${selectedDayAppointments.length} programari` : 'Nicio programare'}</span>
+              </div>
+              <div className="admin-day-agenda-list">
+                {selectedDayAppointments.length ? selectedDayAppointments.map((appointment) => (
+                  <article className={`admin-day-agenda-item admin-day-agenda-item-${appointment.status}`} key={appointment.id || `${appointment.full_name}-${appointment.preferred_time}`}>
+                    <strong>{appointment.preferred_time || 'Ora lipsa'} · {appointment.full_name || 'Clienta'}</strong>
+                    <span>{appointment.service || 'Serviciu lipsa'}</span>
+                    <small>{appointmentStatusLabel(appointment.status)}{appointment.phone ? ` · ${appointment.phone}` : ''}</small>
+                  </article>
+                )) : (
+                  <p>Nu exista programari pentru aceasta zi.</p>
+                )}
+              </div>
+              <button type="button" className="admin-secondary" onClick={() => setAppointmentView('list')}>
+                <ListChecks size={16} /> Editeaza in lista
+              </button>
+            </aside>
+          </div>
+        ) : null}
+
         <div className="admin-service admin-appointment-settings">
           <div className="admin-appointment-settings-header">
             <div>
@@ -2256,13 +2461,16 @@ function AdminApp({ appointmentsOnly = false }) {
           </div>
         </div>
 
+        {appointmentView === 'list' ? (
         <div className="admin-service-list">
-          {appointments.map((appointment, index) => (
+          {sortedAppointments.map((appointment) => {
+            const index = appointments.indexOf(appointment)
+            return (
             <article className={`admin-service admin-appointment ${appointment.id ? '' : 'admin-service-new'}`} key={appointment.id || `appointment-${index}`}>
               {!appointment.id ? <AdminNewBadge /> : null}
               <div className="admin-appointment-meta">
                 <strong>{appointment.preferred_date || 'Data lipsa'} · {appointment.preferred_time || 'Ora lipsa'}</strong>
-                <span>{appointmentStatusOptions.find((option) => option.value === appointment.status)?.label || appointment.status}</span>
+                <span>{appointmentStatusLabel(appointment.status)}</span>
               </div>
               <div className="admin-service-grid">
                 <label>
@@ -2339,8 +2547,10 @@ function AdminApp({ appointmentsOnly = false }) {
                 </button>
               </div>
             </article>
-          ))}
+            )
+          })}
         </div>
+        ) : null}
       </section>
       ) : null}
 
@@ -2795,6 +3005,7 @@ function PublicApp() {
 
   async function submitBooking(event) {
     event.preventDefault()
+    const form = event.currentTarget
     if (!selectedTime) {
       setBookingStatus({ state: 'error', message: 'Alege o ora disponibila pentru programare.' })
       return
@@ -2802,7 +3013,7 @@ function PublicApp() {
 
     setBookingStatus({ state: 'loading', message: 'Se trimite cererea...' })
 
-    const formData = new FormData(event.currentTarget)
+    const formData = new FormData(form)
     const payload = Object.fromEntries(formData.entries())
 
     try {
@@ -2817,7 +3028,7 @@ function PublicApp() {
         throw new Error(data.error || 'Cererea nu a putut fi trimisa.')
       }
 
-      event.currentTarget.reset()
+      form.reset()
       setSelectedDate('')
       setSelectedTime('')
       setAvailability({ state: 'idle', message: '', slots: [] })

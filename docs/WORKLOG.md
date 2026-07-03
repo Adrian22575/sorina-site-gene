@@ -295,3 +295,10 @@
 - Replaced it with a length-only check because services are now owner-editable and validated by the booking API against active `site_services`.
 - Applied the migration to the dedicated Sorina Supabase project `yjhkdmbdilzuwhwluico`.
 - Verified a Romanian service name (`Efect natural`) can be inserted in a rollback transaction.
+
+## 2026-07-03 Appointment Calendar View
+
+- Added a calendar/list view switch to `/admin/programari`.
+- Calendar view shows a monthly grid, appointment chips inside each day, month navigation, today shortcut, and a selected-day agenda.
+- List view keeps the existing full editable appointment cards for moving clients, changing status, and editing notes.
+- Fixed the public booking success flow by keeping a stable form reference before the async request, so a saved appointment no longer shows a false `reset()` error.
