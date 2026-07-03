@@ -154,7 +154,7 @@ Applied decisions:
 - Show occupied slots as disabled and marked `Blocat` so the visitor understands why they cannot choose that hour.
 - Validate the selected slot server-side and reject stale choices if another client booked the slot moments earlier.
 - Add a partial unique index on active appointments so the database also prevents two active bookings for the same date and time.
-- Keep slots configurable through `BOOKING_SLOT_TIMES`; the default can be adjusted once Sorina confirms her actual working rhythm.
+- Keep slots owner-configurable in admin; the default uses 15-minute slots from 10:00 to 18:00 so visitors never choose arbitrary minute-by-minute times.
 
 ## 2026-07-02 Admin Appointments And Email Notifications
 
@@ -164,6 +164,7 @@ Sources checked:
 - Resend Send Email API: https://resend.com/docs/api-reference/emails/send-email
 - Resend scheduled email docs: https://resend.com/docs/dashboard/emails/schedule-email
 - Resend cancel scheduled email API: https://resend.com/docs/api-reference/emails/cancel-email
+- Resend usage limits: https://resend.com/docs/api-reference/rate-limit
 - Vercel Cron Jobs docs: https://vercel.com/docs/cron-jobs
 - Vercel Cron Jobs usage and pricing: https://vercel.com/docs/cron-jobs/usage-and-pricing
 - Supabase changelog index: https://supabase.com/changelog.md
@@ -179,3 +180,20 @@ Applied decisions:
 - Use Vercel Cron once per day for the "maine ai X programari" digest; this fits the free Hobby cron cadence.
 - Use Resend scheduled emails for one-hour reminders because Vercel Hobby cron is not precise enough for hourly checks.
 - When an appointment is moved or cancelled, cancel any existing scheduled reminder and create a fresh one only when the appointment remains active.
+- Client reminders use the same Resend scheduled email path and are only scheduled when the appointment includes a valid client email.
+- Client-facing reminders must not include internal admin notes, status labels, or private owner-only context.
+- Resend Free currently lists 3,000 emails/month and 100 emails/day. The API reports quota and rate-limit details in response headers after requests.
+- If daily/monthly quota is exceeded, Resend returns a 429 quota error; on Free this means notifications can stop until reset or upgrade.
+
+## 2026-07-02 Owner Booking Hours
+
+Sources checked:
+
+- Nielsen Norman Group date-input UX guidance: https://www.nngroup.com/articles/date-input/
+- MDN select reference: https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/select
+
+Applied decisions:
+
+- Keep the owner control as two simple selects: first accepted time and last accepted time.
+- Continue generating 15-minute appointment choices automatically so Sorina does not have to manage individual minute values.
+- Store the setting in the existing protected `site_settings` table instead of adding another backend service.

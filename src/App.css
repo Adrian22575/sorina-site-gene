@@ -1176,6 +1176,62 @@ form button:disabled {
   margin-bottom: 16px;
 }
 
+.admin-appointment-settings-header {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.admin-appointment-settings-header h3 {
+  font-size: 18px;
+}
+
+.admin-appointment-settings-header p {
+  color: var(--soft-ink);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.admin-appointment-settings-header span {
+  align-items: center;
+  background: white;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--wine);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 12px;
+}
+
+.admin-email-limit-note {
+  background: white;
+  border: 1px solid rgba(111, 19, 38, 0.24);
+  border-radius: 8px;
+  color: var(--soft-ink);
+  display: grid;
+  gap: 4px;
+  line-height: 1.45;
+  padding: 12px 14px;
+}
+
+.admin-email-limit-note strong {
+  color: var(--wine);
+  font-size: 13px;
+}
+
+.admin-email-limit-note span {
+  font-size: 13px;
+}
+
+.admin-booking-note {
+  align-self: end;
+}
+
 .admin-appointment-meta {
   align-items: center;
   display: flex;

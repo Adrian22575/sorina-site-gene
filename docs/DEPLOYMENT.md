@@ -31,14 +31,17 @@ Set these for Production, Preview, and Development:
 SUPABASE_URL
 SUPABASE_SERVICE_ROLE_KEY
 ADMIN_PASSWORD
-BOOKING_SLOT_TIMES
+RESEND_API_KEY
+RESEND_FROM_EMAIL
+NOTIFICATION_EMAIL
+CRON_SECRET
 ```
 
 The repo includes `.env.example` with names only.
 
-`ADMIN_PASSWORD` is the password Sorina uses at `/admin` to manage services. It must be stored only in Vercel/local env, never in Git.
+`ADMIN_PASSWORD` is the password Sorina uses at `/admin` and `/admin/programari`. It must be stored only in Vercel/local env, never in Git.
 
-`BOOKING_SLOT_TIMES` is optional and controls public booking slots as comma-separated 24-hour times, for example `10:00,11:00,12:00,13:00,14:00,15:00,16:00,17:00,18:00`.
+Booking hours are edited by Sorina in `/admin/programari` and saved in `site_settings.booking`. If no setting is saved yet, the app defaults to 15-minute slots from 10:00 to 18:00.
 
 ## Supabase Migration
 
@@ -85,11 +88,11 @@ Do not link or deploy this repository to that project. The Sorina site needs its
 1. Copy the Sorina Supabase project URL into the Sorina Vercel project as `SUPABASE_URL`.
 2. Copy the Sorina Supabase service role key into the Sorina Vercel project as `SUPABASE_SERVICE_ROLE_KEY`.
 3. Add a strong private password as `ADMIN_PASSWORD`.
-4. Optionally add `BOOKING_SLOT_TIMES` if Sorina wants different online booking hours than the default.
 4. Deploy after env vars are present, or let Git integration deploy automatically after push.
 5. Test `/admin`, edit a service, contact field, gallery image, review, promotion, and FAQ item.
-6. Confirm `public.site_services`, `public.site_settings`, `public.site_gallery`, `public.site_results`, `public.site_reviews`, `public.site_promotions`, and `public.site_faqs` update in Supabase.
-7. Test the booking form and confirm a row appears in the Sorina `public.appointments` table.
+6. Test `/admin/programari`, set booking hours, and confirm `site_settings.booking` updates.
+7. Confirm `public.site_services`, `public.site_settings`, `public.site_gallery`, `public.site_results`, `public.site_reviews`, `public.site_promotions`, and `public.site_faqs` update in Supabase.
+8. Test the booking form and confirm a row appears in the Sorina `public.appointments` table.
 
 ## CLI Notes
 
@@ -101,7 +104,10 @@ vercel link --yes --scope adrian22575s-projects --project sorina-site-gene
 vercel env add SUPABASE_URL production preview development
 vercel env add SUPABASE_SERVICE_ROLE_KEY production preview development
 vercel env add ADMIN_PASSWORD production preview development
-vercel env add BOOKING_SLOT_TIMES production preview development
+vercel env add RESEND_API_KEY production preview development
+vercel env add RESEND_FROM_EMAIL production preview development
+vercel env add NOTIFICATION_EMAIL production preview development
+vercel env add CRON_SECRET production preview development
 ```
 
 Do not use `--project facultate` and do not run `vercel link` if the CLI proposes the `facultate` project.
@@ -146,6 +152,6 @@ Completed on 2026-07-01:
 
 Still needed:
 
-- Add `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_PASSWORD`, and optional `BOOKING_SLOT_TIMES` to the dedicated Vercel project `sorina-site-gene`.
+- Add `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_PASSWORD`, and email-related variables to the dedicated Vercel project `sorina-site-gene`.
 - The service role key is secret and should be copied from the Supabase dashboard; do not commit it.
 - If `/admin` reports that `SUPABASE_SERVICE_ROLE_KEY` is not a valid `service_role` key, replace the Vercel value with the real Supabase service role/secret key, then redeploy.

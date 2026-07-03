@@ -12,6 +12,8 @@ const defaultNotificationSettings = {
   notify_new: true,
   notify_daily: true,
   notify_before: true,
+  notify_client_day_before: true,
+  notify_client_hour_before: true,
 }
 
 const activeStatuses = new Set(['new', 'contacted', 'confirmed'])
@@ -24,6 +26,8 @@ export function normalizeNotificationSettings(settings = {}) {
     notify_new: settings.notify_new !== false,
     notify_daily: settings.notify_daily !== false,
     notify_before: settings.notify_before !== false,
+    notify_client_day_before: settings.notify_client_day_before !== false,
+    notify_client_hour_before: settings.notify_client_hour_before !== false,
   }
 }
 
@@ -121,6 +125,31 @@ function appointmentHtml(title, appointment, intro) {
   `
 }
 
+function clientAppointmentHtml(title, appointment, intro) {
+  const rows = [
+    ['Serviciu', appointment.service],
+    ['Data', appointment.preferred_date],
+    ['Ora', normalizeTime(appointment.preferred_time)],
+    ['Telefon studio', process.env.PUBLIC_CONTACT_PHONE || 'Telefonul studioului este afisat pe site.'],
+  ].filter(([, value]) => cleanString(value || '', 1200))
+
+  return `
+    <div style="font-family:Arial,sans-serif;line-height:1.55;color:#241917">
+      <h1 style="font-size:20px;margin:0 0 12px">${escapeHtml(title)}</h1>
+      <p style="margin:0 0 18px">${escapeHtml(intro)}</p>
+      <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%">
+        ${rows.map(([label, value]) => `
+          <tr>
+            <td style="border-top:1px solid #eaded7;padding:10px 12px;font-weight:700;width:130px">${escapeHtml(label)}</td>
+            <td style="border-top:1px solid #eaded7;padding:10px 12px">${escapeHtml(value)}</td>
+          </tr>
+        `).join('')}
+      </table>
+      <p style="font-size:12px;color:#705f58;margin-top:18px">Email automat din site-ul Sorina Lash Studio. Daca nu mai poti ajunge, te rugam sa contactezi studioul cat mai repede.</p>
+    </div>
+  `
+}
+
 function digestHtml(date, appointments) {
   const rows = appointments.map((appointment) => `
     <tr>
@@ -151,6 +180,36 @@ function digestHtml(date, appointments) {
   `
 }
 
+function testEmailHtml() {
+  return `
+    <div style="font-family:Arial,sans-serif;line-height:1.55;color:#241917">
+      <h1 style="font-size:20px;margin:0 0 12px">Email test Sorina Lash Studio</h1>
+      <p style="margin:0 0 18px">Acesta este un email de test pentru confirmarile si reminder-ele automate ale site-ului.</p>
+      <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%">
+        <tr>
+          <td style="border-top:1px solid #eaded7;padding:10px 12px;font-weight:700;width:130px">Status</td>
+          <td style="border-top:1px solid #eaded7;padding:10px 12px">Daca ai primit acest email, conexiunea Resend functioneaza.</td>
+        </tr>
+        <tr>
+          <td style="border-top:1px solid #eaded7;padding:10px 12px;font-weight:700;width:130px">Urmatorul pas</td>
+          <td style="border-top:1px solid #eaded7;padding:10px 12px">Testeaza o programare reala si verifica notificarea catre Sorina si catre clienta.</td>
+        </tr>
+      </table>
+      <p style="font-size:12px;color:#705f58;margin-top:18px">Email automat din site-ul Sorina Lash Studio.</p>
+    </div>
+  `
+}
+
+function resendUsageHeaders(headers) {
+  return {
+    daily_quota: headers.get('x-resend-daily-quota') || '',
+    monthly_quota: headers.get('x-resend-monthly-quota') || '',
+    rate_limit: headers.get('ratelimit-limit') || '',
+    rate_remaining: headers.get('ratelimit-remaining') || '',
+    rate_reset: headers.get('ratelimit-reset') || '',
+  }
+}
+
 async function resendRequest(path, options = {}) {
   const apiKey = process.env.RESEND_API_KEY
   if (!apiKey) return { skipped: true, reason: 'RESEND_API_KEY lipseste.' }
@@ -165,11 +224,12 @@ async function resendRequest(path, options = {}) {
   })
 
   const data = await result.json().catch(() => ({}))
+  const usage = resendUsageHeaders(result.headers)
   if (!result.ok) {
-    return { skipped: false, error: data.message || data.error || 'Emailul nu a putut fi trimis.' }
+    return { skipped: false, error: data.message || data.error || 'Emailul nu a putut fi trimis.', usage }
   }
 
-  return { data }
+  return { data, usage }
 }
 
 async function sendResendEmail({ to, subject, html, scheduledAt, idempotencyKey }) {
@@ -215,7 +275,7 @@ async function markNotification(config, id, payload) {
 async function reminderRows(config, appointmentId) {
   const result = await supabaseBookingFetch(
     config,
-    `appointment_notifications?appointment_id=eq.${encodeURIComponent(appointmentId)}&notification_type=eq.one_hour_before&select=id,resend_email_id,status`,
+    `appointment_notifications?appointment_id=eq.${encodeURIComponent(appointmentId)}&notification_type=in.(one_hour_before,client_one_day_before,client_one_hour_before)&select=id,resend_email_id,status`,
   )
 
   if (!result.ok) return []
@@ -261,11 +321,11 @@ function zonedDateTimeToUtc(date, time, timeZone = bookingTimeZone) {
   return estimate
 }
 
-function reminderDateForAppointment(appointment) {
+function reminderDateForAppointment(appointment, minutesBefore = 60) {
   const appointmentDate = zonedDateTimeToUtc(appointment.preferred_date, appointment.preferred_time)
   if (!appointmentDate) return null
 
-  const reminderDate = new Date(appointmentDate.getTime() - 60 * 60 * 1000)
+  const reminderDate = new Date(appointmentDate.getTime() - minutesBefore * 60 * 1000)
   const minDate = new Date(Date.now() + 2 * 60 * 1000)
   const maxDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
@@ -295,34 +355,115 @@ export async function sendNewAppointmentEmail(config, appointment) {
   })
 }
 
+export async function sendTestNotificationEmail(config, settingsInput = {}) {
+  const settings = normalizeNotificationSettings(settingsInput.email ? settingsInput : await readNotificationSettings(config))
+
+  if (!settings.email || !isValidEmail(settings.email)) {
+    const error = new Error('Adresa de email pentru test nu este valida.')
+    error.status = 400
+    throw error
+  }
+
+  const subject = 'Email test Sorina Lash Studio'
+  const result = await sendResendEmail({
+    to: settings.email,
+    subject,
+    html: testEmailHtml(),
+    idempotencyKey: `test-${settings.email}-${Date.now()}`,
+  })
+
+  if (result.skipped || result.error) {
+    const error = new Error(result.reason || result.error || 'Emailul test nu a putut fi trimis.')
+    error.status = result.skipped ? 503 : 502
+    error.usage = result.usage || {}
+    throw error
+  }
+
+  return {
+    id: result.data?.id || '',
+    to: settings.email,
+    usage: result.usage || {},
+  }
+}
+
 export async function replaceAppointmentReminder(config, appointment) {
   if (!appointment?.id) return
   await cancelExistingAppointmentReminder(config, appointment.id)
 
   const settings = await readNotificationSettings(config)
-  if (!settings.notify_before || !settings.email || !activeStatuses.has(appointment.status || 'new')) return
+  if (!activeStatuses.has(appointment.status || 'new')) return
 
-  const reminderDate = reminderDateForAppointment(appointment)
-  if (!reminderDate) return
+  const ownerReminderDate = reminderDateForAppointment(appointment)
+  if (settings.notify_before && settings.email && ownerReminderDate) {
+    const subject = `Reminder peste o ora: ${appointmentTitle(appointment)}`
+    const result = await sendResendEmail({
+      to: settings.email,
+      subject,
+      html: appointmentHtml(subject, appointment, 'Programarea aceasta incepe in aproximativ o ora.'),
+      scheduledAt: ownerReminderDate.toISOString(),
+      idempotencyKey: `one-hour-${appointment.id}-${appointment.preferred_date}-${normalizeTime(appointment.preferred_time)}`,
+    })
 
-  const subject = `Reminder peste o ora: ${appointmentTitle(appointment)}`
-  const result = await sendResendEmail({
-    to: settings.email,
-    subject,
-    html: appointmentHtml(subject, appointment, 'Programarea aceasta incepe in aproximativ o ora.'),
-    scheduledAt: reminderDate.toISOString(),
-    idempotencyKey: `one-hour-${appointment.id}-${appointment.preferred_date}-${normalizeTime(appointment.preferred_time)}`,
-  })
+    await logNotification(config, {
+      appointment_id: appointment.id,
+      notification_type: 'one_hour_before',
+      recipient_email: settings.email,
+      resend_email_id: result.data?.id || null,
+      scheduled_for: ownerReminderDate.toISOString(),
+      status: result.data?.id ? 'pending' : (result.skipped ? 'skipped' : 'failed'),
+      error_message: result.reason || result.error || '',
+    })
+  }
 
-  await logNotification(config, {
-    appointment_id: appointment.id,
-    notification_type: 'one_hour_before',
-    recipient_email: settings.email,
-    resend_email_id: result.data?.id || null,
-    scheduled_for: reminderDate.toISOString(),
-    status: result.data?.id ? 'pending' : (result.skipped ? 'skipped' : 'failed'),
-    error_message: result.reason || result.error || '',
-  })
+  if (!isValidEmail(appointment.email)) return
+
+  if (settings.notify_client_day_before) {
+    const clientDayReminderDate = reminderDateForAppointment(appointment, 24 * 60)
+    if (clientDayReminderDate) {
+      const subject = 'Reminder programare maine la Sorina'
+      const result = await sendResendEmail({
+        to: appointment.email,
+        subject,
+        html: clientAppointmentHtml(subject, appointment, 'Buna! Iti reamintim ca ai programare maine la Sorina Lash Studio.'),
+        scheduledAt: clientDayReminderDate.toISOString(),
+        idempotencyKey: `client-day-${appointment.id}-${appointment.preferred_date}-${normalizeTime(appointment.preferred_time)}`,
+      })
+
+      await logNotification(config, {
+        appointment_id: appointment.id,
+        notification_type: 'client_one_day_before',
+        recipient_email: appointment.email,
+        resend_email_id: result.data?.id || null,
+        scheduled_for: clientDayReminderDate.toISOString(),
+        status: result.data?.id ? 'pending' : (result.skipped ? 'skipped' : 'failed'),
+        error_message: result.reason || result.error || '',
+      })
+    }
+  }
+
+  if (settings.notify_client_hour_before) {
+    const clientHourReminderDate = reminderDateForAppointment(appointment)
+    if (clientHourReminderDate) {
+      const subject = 'Programarea ta incepe intr-o ora'
+      const result = await sendResendEmail({
+        to: appointment.email,
+        subject,
+        html: clientAppointmentHtml(subject, appointment, 'Buna! Programarea ta la Sorina Lash Studio incepe in aproximativ o ora.'),
+        scheduledAt: clientHourReminderDate.toISOString(),
+        idempotencyKey: `client-hour-${appointment.id}-${appointment.preferred_date}-${normalizeTime(appointment.preferred_time)}`,
+      })
+
+      await logNotification(config, {
+        appointment_id: appointment.id,
+        notification_type: 'client_one_hour_before',
+        recipient_email: appointment.email,
+        resend_email_id: result.data?.id || null,
+        scheduled_for: clientHourReminderDate.toISOString(),
+        status: result.data?.id ? 'pending' : (result.skipped ? 'skipped' : 'failed'),
+        error_message: result.reason || result.error || '',
+      })
+    }
+  }
 }
 
 async function notificationExists(config, type, digestDate) {

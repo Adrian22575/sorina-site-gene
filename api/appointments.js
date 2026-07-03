@@ -8,6 +8,7 @@ import {
   isPastDate,
   isValidDate,
   normalizeTime,
+  readBookingSettings,
   sendJson,
   supabaseBookingFetch,
   todayInBucharest,
@@ -117,7 +118,8 @@ export default async function handler(request, response) {
     return sendJson(response, 400, { error: 'Data sau ora nu este valida.' })
   }
 
-  if (!bookingSlots().includes(appointment.preferred_time)) {
+  const bookingSettings = await readBookingSettings(config)
+  if (!bookingSlots(bookingSettings).includes(appointment.preferred_time)) {
     return sendJson(response, 400, { error: 'Ora aleasa nu este disponibila pentru programari online.' })
   }
 

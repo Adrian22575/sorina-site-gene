@@ -7,6 +7,9 @@ import {
   hasBookingConfig,
   isValidDate,
   normalizeTime,
+  normalizeBookingSettings,
+  readBookingSettings,
+  saveBookingSettings,
   sendJson,
   supabaseBookingFetch,
 } from '../_booking.js'
@@ -16,6 +19,7 @@ import {
   readNotificationSettings,
   replaceAppointmentReminder,
   saveNotificationSettings,
+  sendTestNotificationEmail,
 } from '../_email.js'
 
 const statuses = new Set(['new', 'contacted', 'confirmed', 'cancelled'])
@@ -55,12 +59,12 @@ function appointmentPayload(body, fallback = {}) {
   }
 }
 
-function validateAppointment(payload) {
+function validateAppointment(payload, slots) {
   if (!payload.full_name) return 'Numele clientei este obligatoriu.'
   if (!payload.phone) return 'Telefonul clientei este obligatoriu.'
   if (!payload.service) return 'Serviciul este obligatoriu.'
   if (!isValidDate(payload.preferred_date)) return 'Alege o data valida.'
-  if (!bookingSlots().includes(payload.preferred_time)) return 'Alege o ora din sloturile configurate.'
+  if (!slots.includes(payload.preferred_time)) return 'Alege o ora din sloturile configurate.'
   return ''
 }
 
@@ -87,7 +91,8 @@ async function listAppointments(config) {
 
 async function createAppointment(config, body) {
   const payload = appointmentPayload(body)
-  const validationError = validateAppointment(payload)
+  const bookingSettings = await readBookingSettings(config)
+  const validationError = validateAppointment(payload, bookingSlots(bookingSettings))
   if (validationError) return { status: 400, error: validationError }
 
   await ensureAvailableSlot(config, payload)
@@ -125,7 +130,8 @@ async function updateAppointment(config, id, body) {
   if (!current) return { status: 404, error: 'Programarea nu exista.' }
 
   const payload = appointmentPayload(body, current)
-  const validationError = validateAppointment(payload)
+  const bookingSettings = await readBookingSettings(config)
+  const validationError = validateAppointment(payload, bookingSlots(bookingSettings))
   if (validationError) return { status: 400, error: validationError }
 
   await ensureAvailableSlot(config, payload, id)
@@ -173,14 +179,35 @@ export default async function handler(request, response) {
 
   try {
     if (request.method === 'GET') {
+      const bookingSettings = await readBookingSettings(config)
       return sendJson(response, 200, {
         appointments: await listAppointments(config),
         notifications: await readNotificationSettings(config),
-        slots: bookingSlots(),
+        booking_settings: bookingSettings,
+        slots: bookingSlots(bookingSettings),
       })
     }
 
     const body = await readBody(request)
+
+    if (body.test_email) {
+      const testSettings = body.notifications ? normalizeNotificationSettings(body.notifications) : await readNotificationSettings(config)
+      if (!testSettings.email || !isValidEmail(testSettings.email)) {
+        return sendJson(response, 400, { error: 'Adresa de email pentru test nu este valida.' })
+      }
+
+      const testResult = await sendTestNotificationEmail(config, testSettings)
+      return sendJson(response, 200, { ok: true, test: testResult })
+    }
+
+    if (body.booking_settings) {
+      const bookingSettings = normalizeBookingSettings(body.booking_settings)
+      const savedSettings = await saveBookingSettings(config, bookingSettings)
+      return sendJson(response, 200, {
+        booking_settings: savedSettings,
+        slots: bookingSlots(savedSettings),
+      })
+    }
 
     if (body.notifications) {
       const notifications = normalizeNotificationSettings(body.notifications)
@@ -189,6 +216,8 @@ export default async function handler(request, response) {
       }
 
       const savedSettings = await saveNotificationSettings(config, notifications)
+      const activeAppointments = (await listAppointments(config)).filter((appointment) => activeStatuses.has(appointment.status))
+      await Promise.allSettled(activeAppointments.map((appointment) => replaceAppointmentReminder(config, appointment)))
       return sendJson(response, 200, { notifications: savedSettings })
     }
 

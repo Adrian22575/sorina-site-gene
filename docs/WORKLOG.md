@@ -235,7 +235,7 @@
   - Booked active slots return `409` instead of allowing a duplicate request.
 - Replaced the free time input in the public booking form with selectable slot buttons.
 - Occupied slots remain visible as `Blocat` and cannot be selected.
-- Added optional `BOOKING_SLOT_TIMES` env support. Current default slots are hourly from 10:00 to 18:00 until Sorina confirms exact availability.
+- Current default slots run every 15 minutes from 10:00 to 18:00 until Sorina saves her exact online booking hours in admin.
 - Added migration `202607020005_add_appointment_slot_uniqueness.sql` with a partial unique index for active appointment slots.
 - Applied the migration to the dedicated Sorina Supabase project `yjhkdmbdilzuwhwluico` after checking there were no existing duplicate active slots.
 
@@ -260,3 +260,30 @@
 - Kept `/admin` focused on editable site content, with a header link to the appointments page.
 - Added a real delete action for appointments in the admin API and UI.
 - Delete cancels/replaces any pending reminder before removing the appointment row.
+
+## 2026-07-02 Client Appointment Reminders
+
+- Added notification log types for client reminders:
+  - `client_one_day_before`
+  - `client_one_hour_before`
+- Client reminders are scheduled through Resend only when the appointment has a valid client email.
+- Client emails include only appointment details, not internal notes or admin status.
+- Saving notification settings now reschedules reminders for active appointments.
+- Updated the live email preview page with client reminder examples.
+
+## 2026-07-02 Email Test And Resend Limits
+
+- Added a protected admin action for sending a test email to the notification email currently set in `/admin/programari`.
+- Added Resend Free plan awareness in the appointments admin:
+  - 3,000 emails/month.
+  - 100 emails/day.
+  - If the quota is exceeded, notifications can stop until reset or plan upgrade.
+- Test email responses surface Resend quota headers when Resend returns them.
+- Added the test email layout to the public email preview page.
+
+## 2026-07-02 Owner Booking Hours
+
+- Added owner-editable booking hours in `/admin/programari`.
+- Stored the booking schedule in `site_settings.booking`, reusing the existing server-side settings table.
+- Public booking availability and admin appointment validation now generate 15-minute slots from Sorina's saved start/end hours.
+- Existing appointments outside the current schedule stay visible in admin and are labelled in the time dropdown instead of disappearing.

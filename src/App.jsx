@@ -142,7 +142,26 @@ const defaultNotificationSettings = {
   notify_new: true,
   notify_daily: true,
   notify_before: true,
+  notify_client_day_before: true,
+  notify_client_hour_before: true,
 }
+
+const defaultBookingSettings = {
+  start_time: '10:00',
+  end_time: '18:00',
+}
+
+function buildTimeOptions() {
+  const options = []
+  for (let minutes = 0; minutes < 24 * 60; minutes += 15) {
+    const hour = String(Math.floor(minutes / 60)).padStart(2, '0')
+    const minute = String(minutes % 60).padStart(2, '0')
+    options.push(`${hour}:${minute}`)
+  }
+  return options
+}
+
+const bookingTimeOptions = buildTimeOptions()
 
 const appointmentStatusOptions = [
   { value: 'new', label: 'Noua' },
@@ -226,6 +245,20 @@ function normalizeNotificationSettings(settings = {}) {
     notify_new: settings.notify_new !== false,
     notify_daily: settings.notify_daily !== false,
     notify_before: settings.notify_before !== false,
+    notify_client_day_before: settings.notify_client_day_before !== false,
+    notify_client_hour_before: settings.notify_client_hour_before !== false,
+  }
+}
+
+function normalizeBookingSettings(settings = {}) {
+  const startTime = bookingTimeOptions.includes(settings.start_time) ? settings.start_time : defaultBookingSettings.start_time
+  const endTime = bookingTimeOptions.includes(settings.end_time) ? settings.end_time : defaultBookingSettings.end_time
+
+  if (endTime <= startTime) return defaultBookingSettings
+
+  return {
+    start_time: startTime,
+    end_time: endTime,
   }
 }
 
@@ -742,6 +775,7 @@ function AdminApp({ appointmentsOnly = false }) {
   const [services, setServices] = useState([])
   const [appointments, setAppointments] = useState([])
   const [notificationSettings, setNotificationSettings] = useState(defaultNotificationSettings)
+  const [bookingSettings, setBookingSettings] = useState(defaultBookingSettings)
   const [adminSlots, setAdminSlots] = useState([])
   const [content, setContent] = useState(() => normalizeContent({}))
   const [status, setStatus] = useState({ state: 'idle', message: '' })
@@ -783,6 +817,7 @@ function AdminApp({ appointmentsOnly = false }) {
       setContent(normalizeContent(contentData))
       setAppointments((appointmentData.appointments || []).map(normalizeAppointment))
       setNotificationSettings(normalizeNotificationSettings(appointmentData.notifications))
+      setBookingSettings(normalizeBookingSettings(appointmentData.booking_settings))
       setAdminSlots(appointmentData.slots || [])
       setStatus({ state: 'success', message: 'Continutul este actualizat.' })
     } catch (error) {
@@ -840,6 +875,7 @@ function AdminApp({ appointmentsOnly = false }) {
           setContent(normalizeContent(contentData))
           setAppointments((appointmentData.appointments || []).map(normalizeAppointment))
           setNotificationSettings(normalizeNotificationSettings(appointmentData.notifications))
+          setBookingSettings(normalizeBookingSettings(appointmentData.booking_settings))
           setAdminSlots(appointmentData.slots || [])
           setStatus({ state: 'success', message: 'Continutul este actualizat.' })
         }
@@ -907,6 +943,7 @@ function AdminApp({ appointmentsOnly = false }) {
     setServices([])
     setAppointments([])
     setNotificationSettings(defaultNotificationSettings)
+    setBookingSettings(defaultBookingSettings)
     setAdminSlots([])
     setContent(normalizeContent({}))
     setStatus({ state: 'idle', message: '' })
@@ -927,6 +964,34 @@ function AdminApp({ appointmentsOnly = false }) {
 
   function updateNotificationSetting(field, value) {
     setNotificationSettings((current) => ({ ...current, [field]: value }))
+  }
+
+  function updateBookingSetting(field, value) {
+    setBookingSettings((current) => {
+      const selectedIndex = bookingTimeOptions.indexOf(value)
+      if (selectedIndex < 0) return current
+
+      const currentStartIndex = bookingTimeOptions.indexOf(current.start_time)
+      const currentEndIndex = bookingTimeOptions.indexOf(current.end_time)
+
+      if (field === 'start_time') {
+        const startIndex = Math.min(selectedIndex, bookingTimeOptions.length - 2)
+        return {
+          start_time: bookingTimeOptions[startIndex],
+          end_time: currentEndIndex > startIndex ? current.end_time : bookingTimeOptions[startIndex + 1],
+        }
+      }
+
+      if (field === 'end_time') {
+        const endIndex = Math.max(selectedIndex, 1)
+        return {
+          start_time: currentStartIndex >= 0 && currentStartIndex < endIndex ? current.start_time : bookingTimeOptions[endIndex - 1],
+          end_time: bookingTimeOptions[endIndex],
+        }
+      }
+
+      return normalizeBookingSettings({ ...current, [field]: value })
+    })
   }
 
   function updateAppointment(index, field, value) {
@@ -1068,6 +1133,46 @@ function AdminApp({ appointmentsOnly = false }) {
       })
       setNotificationSettings(normalizeNotificationSettings(data.notifications))
       setStatus({ state: 'success', message: 'Setarile de notificari au fost salvate.' })
+    } catch (error) {
+      setStatus({ state: 'error', message: error.message })
+    }
+  }
+
+  async function saveBookingSettings() {
+    setStatus({ state: 'loading', message: 'Se salveaza orele de programari...' })
+
+    try {
+      const data = await adminRequest('/api/admin/appointments', {
+        method: 'PATCH',
+        body: JSON.stringify({ booking_settings: bookingSettings }),
+      })
+      setBookingSettings(normalizeBookingSettings(data.booking_settings))
+      setAdminSlots(data.slots || [])
+      setStatus({ state: 'success', message: 'Orele de programari au fost salvate.' })
+    } catch (error) {
+      setStatus({ state: 'error', message: error.message })
+    }
+  }
+
+  async function sendTestNotificationEmail() {
+    setStatus({ state: 'loading', message: 'Se trimite emailul test...' })
+
+    try {
+      const data = await adminRequest('/api/admin/appointments', {
+        method: 'PATCH',
+        body: JSON.stringify({ test_email: true, notifications: notificationSettings }),
+      })
+      const usage = data.test?.usage || {}
+      const usageText = [
+        usage.daily_quota ? `zi: ${usage.daily_quota}` : '',
+        usage.monthly_quota ? `luna: ${usage.monthly_quota}` : '',
+      ].filter(Boolean).join(', ')
+      setStatus({
+        state: 'success',
+        message: usageText
+          ? `Email test trimis catre ${data.test?.to}. Consum Resend: ${usageText}.`
+          : `Email test trimis catre ${data.test?.to}.`,
+      })
     } catch (error) {
       setStatus({ state: 'error', message: error.message })
     }
@@ -2042,8 +2147,48 @@ function AdminApp({ appointmentsOnly = false }) {
             <button type="button" className="admin-secondary" onClick={saveNotificationSettings} disabled={isBusy}>
               <AtSign size={16} /> Salveaza notificari
             </button>
+            <button type="button" className="admin-secondary" onClick={sendTestNotificationEmail} disabled={isBusy || !notificationSettings.email}>
+              <AtSign size={16} /> Trimite test
+            </button>
             <button type="button" onClick={addAppointment} disabled={isBusy}>
               <Plus size={16} /> Adauga programare
+            </button>
+          </div>
+        </div>
+
+        <div className="admin-service admin-appointment-settings">
+          <div className="admin-appointment-settings-header">
+            <div>
+              <h3>Ore acceptate pentru programari</h3>
+              <p>Clientele pot alege ore din 15 in 15 minute in acest interval.</p>
+            </div>
+            <span><Clock size={15} /> {adminSlots.length} intervale</span>
+          </div>
+          <div className="admin-service-grid">
+            <label>
+              Prima ora acceptata
+              <select value={bookingSettings.start_time} onChange={(event) => updateBookingSetting('start_time', event.target.value)}>
+                {bookingTimeOptions.map((time) => (
+                  <option key={time} value={time}>{time}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Ultima ora acceptata
+              <select value={bookingSettings.end_time} onChange={(event) => updateBookingSetting('end_time', event.target.value)}>
+                {bookingTimeOptions.map((time) => (
+                  <option key={time} value={time}>{time}</option>
+                ))}
+              </select>
+            </label>
+            <div className="admin-email-limit-note admin-booking-note">
+              <strong>Program online</strong>
+              <span>Modificarile se aplica formularului public si programarilor create din admin dupa salvare.</span>
+            </div>
+          </div>
+          <div className="admin-row-actions">
+            <button type="button" className="admin-secondary" onClick={saveBookingSettings} disabled={isBusy}>
+              <Save size={16} /> Salveaza orele
             </button>
           </div>
         </div>
@@ -2081,8 +2226,28 @@ function AdminApp({ appointmentsOnly = false }) {
                 checked={notificationSettings.notify_before}
                 onChange={(event) => updateNotificationSetting('notify_before', event.target.checked)}
               />
-              <span>Reminder cu o ora inainte</span>
+              <span>Reminder Sorina cu o ora inainte</span>
             </label>
+            <label className="admin-check">
+              <input
+                type="checkbox"
+                checked={notificationSettings.notify_client_day_before}
+                onChange={(event) => updateNotificationSetting('notify_client_day_before', event.target.checked)}
+              />
+              <span>Clienta: reminder cu o zi inainte</span>
+            </label>
+            <label className="admin-check">
+              <input
+                type="checkbox"
+                checked={notificationSettings.notify_client_hour_before}
+                onChange={(event) => updateNotificationSetting('notify_client_hour_before', event.target.checked)}
+              />
+              <span>Clienta: reminder cu o ora inainte</span>
+            </label>
+            <div className="admin-email-limit-note full">
+              <strong>Limita Resend Free</strong>
+              <span>3.000 emailuri/luna si 100 emailuri/zi. Daca se depaseste limita, notificarile pot sa nu mai fie trimise pana la resetarea limitei sau pana la upgrade/plan platit.</span>
+            </div>
           </div>
         </div>
 
@@ -2123,6 +2288,9 @@ function AdminApp({ appointmentsOnly = false }) {
                   Ora
                   <select value={appointment.preferred_time} onChange={(event) => updateAppointment(index, 'preferred_time', event.target.value)}>
                     <option value="">Alege ora</option>
+                    {appointment.preferred_time && !adminSlots.includes(appointment.preferred_time) ? (
+                      <option value={appointment.preferred_time}>{appointment.preferred_time} (in afara programului curent)</option>
+                    ) : null}
                     {adminSlots.map((slot) => (
                       <option key={slot} value={slot}>{slot}</option>
                     ))}

@@ -1,16 +1,65 @@
 export const bookingTimeZone = 'Europe/Bucharest'
 
-export const defaultBookingSlots = [
-  '10:00',
-  '11:00',
-  '12:00',
-  '13:00',
-  '14:00',
-  '15:00',
-  '16:00',
-  '17:00',
-  '18:00',
-]
+export const defaultBookingSettings = {
+  start_time: '10:00',
+  end_time: '18:00',
+}
+
+function minutesFromTime(value) {
+  const time = normalizeTime(value)
+  if (!time) return null
+  const [hour, minute] = time.split(':').map(Number)
+  if (hour > 23 || minute > 59) return null
+  return hour * 60 + minute
+}
+
+function timeFromMinutes(value) {
+  const hour = String(Math.floor(value / 60)).padStart(2, '0')
+  const minute = String(value % 60).padStart(2, '0')
+  return `${hour}:${minute}`
+}
+
+export function normalizeBookingSettings(settings = {}) {
+  const defaultStart = minutesFromTime(defaultBookingSettings.start_time)
+  const defaultEnd = minutesFromTime(defaultBookingSettings.end_time)
+  const startMinutes = minutesFromTime(settings.start_time)
+  const endMinutes = minutesFromTime(settings.end_time)
+  const safeStart = startMinutes === null ? defaultStart : startMinutes
+  const safeEnd = endMinutes === null ? defaultEnd : endMinutes
+
+  if (safeEnd <= safeStart) {
+    return { ...defaultBookingSettings }
+  }
+
+  return {
+    start_time: timeFromMinutes(safeStart),
+    end_time: timeFromMinutes(safeEnd),
+  }
+}
+
+function generateDefaultBookingSlots() {
+  return bookingSlots(defaultBookingSettings)
+}
+
+export function bookingSlots(settings = null) {
+  const slots = []
+  const bookingSettings = settings ? normalizeBookingSettings(settings) : null
+
+  if (!bookingSettings) {
+    return defaultBookingSlots
+  }
+
+  const startMinutes = minutesFromTime(bookingSettings.start_time)
+  const endMinutes = minutesFromTime(bookingSettings.end_time)
+
+  for (let minutes = startMinutes; minutes <= endMinutes; minutes += 15) {
+    slots.push(timeFromMinutes(minutes))
+  }
+
+  return slots
+}
+
+export const defaultBookingSlots = generateDefaultBookingSlots()
 
 export function sendJson(response, status, payload) {
   response.statusCode = status
@@ -33,15 +82,6 @@ export function normalizeTime(value) {
   const match = cleanValue.match(/^(\d{2}):(\d{2})(?::\d{2})?$/)
   if (!match) return ''
   return `${match[1]}:${match[2]}`
-}
-
-export function bookingSlots() {
-  const envSlots = cleanString(process.env.BOOKING_SLOT_TIMES, 500)
-    .split(',')
-    .map((slot) => normalizeTime(slot))
-    .filter(Boolean)
-
-  return envSlots.length ? [...new Set(envSlots)] : defaultBookingSlots
 }
 
 export function todayInBucharest(date = new Date()) {
@@ -104,6 +144,43 @@ export async function supabaseBookingFetch(config, path, options = {}) {
   })
 }
 
+export async function readBookingSettings(config) {
+  const result = await supabaseBookingFetch(config, 'site_settings?key=eq.booking&select=value')
+  if (!result.ok) return normalizeBookingSettings()
+
+  const rows = await result.json()
+  return normalizeBookingSettings(rows[0]?.value || {})
+}
+
+export async function saveBookingSettings(config, settings) {
+  const payload = {
+    key: 'booking',
+    value: normalizeBookingSettings(settings),
+  }
+
+  const updateResult = await supabaseBookingFetch(config, 'site_settings?key=eq.booking', {
+    method: 'PATCH',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify(payload),
+  })
+
+  if (updateResult.ok) {
+    const rows = await updateResult.json().catch(() => [])
+    if (rows.length) return rows[0].value
+  }
+
+  const insertResult = await supabaseBookingFetch(config, 'site_settings', {
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify(payload),
+  })
+
+  if (!insertResult.ok) throw new Error('Orele de programari nu au putut fi salvate.')
+
+  const rows = await insertResult.json()
+  return rows[0]?.value || payload.value
+}
+
 export async function bookedTimesForDate(config, date) {
   const endpoint = new URL(`${config.baseUrl}/rest/v1/appointments`)
   endpoint.searchParams.set('select', 'preferred_time,status')
@@ -144,7 +221,8 @@ export async function bookedTimesForDateExcept(config, date, appointmentId = '')
 }
 
 export async function availabilityForDate(config, date) {
-  const slots = bookingSlots()
+  const bookingSettings = await readBookingSettings(config)
+  const slots = bookingSlots(bookingSettings)
   const bookedTimes = isValidDate(date) && !isPastDate(date)
     ? await bookedTimesForDate(config, date)
     : new Set()
