@@ -287,3 +287,11 @@
 - Stored the booking schedule in `site_settings.booking`, reusing the existing server-side settings table.
 - Public booking availability and admin appointment validation now generate 15-minute slots from Sorina's saved start/end hours.
 - Existing appointments outside the current schedule stay visible in admin and are labelled in the time dropdown instead of disappearing.
+
+## 2026-07-03 Appointment Service Constraint Fix
+
+- Added migration `202607030001_allow_dynamic_appointment_services.sql`.
+- Removed the old `appointments.service` fixed English service-name check.
+- Replaced it with a length-only check because services are now owner-editable and validated by the booking API against active `site_services`.
+- Applied the migration to the dedicated Sorina Supabase project `yjhkdmbdilzuwhwluico`.
+- Verified a Romanian service name (`Efect natural`) can be inserted in a rollback transaction.
