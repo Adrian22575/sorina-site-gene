@@ -2310,6 +2310,7 @@ function AdminApp({ appointmentsOnly = false }) {
                   return (
                     <button
                       type="button"
+                      aria-label={`${formatRomanianDate(day.key)}${dayAppointments.length ? `, ${dayAppointments.length} programari` : ', nicio programare'}`}
                       className={[
                         'admin-calendar-day',
                         day.isCurrentMonth ? '' : 'admin-calendar-day-muted',
@@ -2922,6 +2923,7 @@ function PublicApp() {
   const [serviceList, setServiceList] = useState(defaultServices)
   const [siteContent, setSiteContent] = useState(() => normalizeContent({}))
   const [bookingStatus, setBookingStatus] = useState({ state: 'idle', message: '' })
+  const [selectedService, setSelectedService] = useState('')
   const [selectedDate, setSelectedDate] = useState('')
   const [selectedTime, setSelectedTime] = useState('')
   const [availability, setAvailability] = useState({ state: 'idle', message: '', slots: [] })
@@ -2953,8 +2955,12 @@ function PublicApp() {
   }, [])
 
   useEffect(() => {
-    if (!selectedDate) {
-      setAvailability({ state: 'idle', message: '', slots: [] })
+    if (!selectedDate || !selectedService) {
+      setAvailability({
+        state: 'idle',
+        message: selectedDate ? 'Alege serviciul ca sa vezi orele potrivite duratei lui.' : '',
+        slots: [],
+      })
       setSelectedTime('')
       return undefined
     }
@@ -2966,7 +2972,7 @@ function PublicApp() {
 
     async function loadAvailability() {
       try {
-        const response = await fetch(`/api/appointments?date=${encodeURIComponent(selectedDate)}`, {
+        const response = await fetch(`/api/appointments?date=${encodeURIComponent(selectedDate)}&service=${encodeURIComponent(selectedService)}`, {
           signal: controller.signal,
         })
         const data = await response.json().catch(() => ({}))
@@ -2994,7 +3000,7 @@ function PublicApp() {
       isMounted = false
       controller.abort()
     }
-  }, [selectedDate])
+  }, [selectedDate, selectedService])
 
   useEffect(() => {
     upsertStructuredData(serviceList, siteContent)
@@ -3029,6 +3035,7 @@ function PublicApp() {
       }
 
       form.reset()
+      setSelectedService('')
       setSelectedDate('')
       setSelectedTime('')
       setAvailability({ state: 'idle', message: '', slots: [] })
@@ -3274,7 +3281,12 @@ function PublicApp() {
           </label>
           <label>
             Serviciu
-            <select name="service" defaultValue="" required>
+            <select
+              name="service"
+              value={selectedService}
+              onChange={(event) => setSelectedService(event.target.value)}
+              required
+            >
               <option value="" disabled>Alege serviciul</option>
               {serviceList.map((service) => <option key={service.title}>{service.title}</option>)}
             </select>
@@ -3297,7 +3309,7 @@ function PublicApp() {
                 {availability.message}
               </p>
             ) : (
-              <p className="slot-status">Alege intai data preferata.</p>
+              <p className="slot-status">Alege intai serviciul si data preferata.</p>
             )}
             <div className="booking-slot-grid" aria-label="Ore disponibile pentru programare">
               {availability.slots.map((slot) => (

@@ -1,7 +1,7 @@
 import crypto from 'node:crypto'
 import {
-  bookedTimesForDateExcept,
   bookingSlots,
+  bookedAppointmentsForDate,
   cleanString,
   getSupabaseBookingConfig,
   hasBookingConfig,
@@ -11,6 +11,8 @@ import {
   readBookingSettings,
   saveBookingSettings,
   sendJson,
+  serviceDurationMinutes,
+  slotOverlapsAppointments,
   supabaseBookingFetch,
 } from '../_booking.js'
 import {
@@ -24,6 +26,12 @@ import {
 
 const statuses = new Set(['new', 'contacted', 'confirmed', 'cancelled'])
 const activeStatuses = new Set(['new', 'contacted', 'confirmed'])
+const fallbackServiceDurations = new Map([
+  ['Efect natural', 60],
+  ['Volum delicat', 90],
+  ['Efect intens', 120],
+  ['Laminare gene / sprancene', 60],
+])
 
 function safeEqual(left, right) {
   const leftBuffer = Buffer.from(left)
@@ -71,12 +79,26 @@ function validateAppointment(payload, slots) {
 async function ensureAvailableSlot(config, payload, appointmentId = '') {
   if (!activeStatuses.has(payload.status)) return
 
-  const bookedTimes = await bookedTimesForDateExcept(config, payload.preferred_date, appointmentId)
-  if (bookedTimes.has(payload.preferred_time)) {
+  const serviceDurations = await readServiceDurations(config)
+  const appointmentDuration = serviceDurationMinutes(payload.service, serviceDurations)
+  const bookedAppointments = await bookedAppointmentsForDate(config, payload.preferred_date, appointmentId)
+
+  if (slotOverlapsAppointments(payload.preferred_time, appointmentDuration, bookedAppointments, serviceDurations)) {
     const error = new Error('Acest interval este deja ocupat de alta clienta.')
     error.status = 409
     throw error
   }
+}
+
+async function readServiceDurations(config) {
+  const result = await supabaseBookingFetch(config, 'site_services?select=title,duration&order=sort_order.asc,title.asc')
+
+  if (!result.ok) return new Map(fallbackServiceDurations)
+
+  const rows = await result.json()
+  return rows.length
+    ? new Map(rows.map((service) => [service.title, serviceDurationMinutes(service)]))
+    : new Map(fallbackServiceDurations)
 }
 
 async function listAppointments(config) {

@@ -1,7 +1,7 @@
 import {
   availabilityForDate,
-  bookedTimesForDate,
   bookingSlots,
+  bookedAppointmentsForDate,
   cleanString,
   getSupabaseBookingConfig,
   hasBookingConfig,
@@ -10,23 +10,24 @@ import {
   normalizeTime,
   readBookingSettings,
   sendJson,
+  serviceDurationMinutes,
+  slotOverlapsAppointments,
   supabaseBookingFetch,
   todayInBucharest,
 } from './_booking.js'
 import { replaceAppointmentReminder, sendNewAppointmentEmail } from './_email.js'
 
 const allowedMethods = ['GET', 'POST']
-const fallbackServices = [
-  'Efect natural',
-  'Volum delicat',
-  'Efect intens',
-  'Laminare gene / sprancene',
-]
+const fallbackServiceDurations = new Map([
+  ['Efect natural', 60],
+  ['Volum delicat', 90],
+  ['Efect intens', 120],
+  ['Laminare gene / sprancene', 60],
+])
 
-async function getAllowedServices(supabaseUrl, serviceRoleKey) {
+async function getServices(supabaseUrl, serviceRoleKey) {
   const endpoint = new URL(`${supabaseUrl.replace(/\/$/, '')}/rest/v1/site_services`)
-  endpoint.searchParams.set('select', 'title')
-  endpoint.searchParams.set('is_active', 'eq.true')
+  endpoint.searchParams.set('select', 'title,duration,is_active')
   endpoint.searchParams.set('order', 'sort_order.asc,title.asc')
 
   const supabaseResponse = await fetch(endpoint, {
@@ -37,11 +38,26 @@ async function getAllowedServices(supabaseUrl, serviceRoleKey) {
   })
 
   if (!supabaseResponse.ok) {
-    return new Set(fallbackServices)
+    return {
+      allowedServices: new Map(fallbackServiceDurations),
+      serviceDurations: new Map(fallbackServiceDurations),
+    }
   }
 
   const rows = await supabaseResponse.json()
-  return new Set(rows.length ? rows.map((row) => row.title) : fallbackServices)
+  if (!rows.length) {
+    return {
+      allowedServices: new Map(fallbackServiceDurations),
+      serviceDurations: new Map(fallbackServiceDurations),
+    }
+  }
+
+  return {
+    allowedServices: new Map(rows
+      .filter((row) => row.is_active !== false)
+      .map((row) => [row.title, serviceDurationMinutes(row)])),
+    serviceDurations: new Map(rows.map((row) => [row.title, serviceDurationMinutes(row)])),
+  }
 }
 
 export default async function handler(request, response) {
@@ -61,13 +77,15 @@ export default async function handler(request, response) {
 
   if (request.method === 'GET') {
     const date = cleanString(request.query.date, 20)
+    const service = cleanString(request.query.service, 80)
     if (!isValidDate(date)) return sendJson(response, 400, { error: 'Alege o data valida.' })
 
     try {
+      const { serviceDurations } = await getServices(config.baseUrl, config.serviceRoleKey)
       return sendJson(response, 200, {
         date,
         min_date: todayInBucharest(),
-        slots: await availabilityForDate(config, date),
+        slots: await availabilityForDate(config, date, service, serviceDurations),
       })
     } catch (error) {
       return sendJson(response, 500, { error: error.message || 'Sloturile nu au putut fi incarcate.' })
@@ -109,7 +127,7 @@ export default async function handler(request, response) {
     return sendJson(response, 400, { error: 'Completeaza numele, telefonul, serviciul, data si ora.' })
   }
 
-  const allowedServices = await getAllowedServices(config.baseUrl, config.serviceRoleKey)
+  const { allowedServices, serviceDurations } = await getServices(config.baseUrl, config.serviceRoleKey)
   if (!allowedServices.has(appointment.service)) {
     return sendJson(response, 400, { error: 'Serviciul ales nu este valid.' })
   }
@@ -123,8 +141,9 @@ export default async function handler(request, response) {
     return sendJson(response, 400, { error: 'Ora aleasa nu este disponibila pentru programari online.' })
   }
 
-  const bookedTimes = await bookedTimesForDate(config, appointment.preferred_date)
-  if (bookedTimes.has(appointment.preferred_time)) {
+  const appointmentDuration = serviceDurationMinutes(appointment.service, allowedServices)
+  const bookedAppointments = await bookedAppointmentsForDate(config, appointment.preferred_date)
+  if (slotOverlapsAppointments(appointment.preferred_time, appointmentDuration, bookedAppointments, serviceDurations)) {
     return sendJson(response, 409, { error: 'Acest interval este deja blocat. Alege alta ora.' })
   }
 

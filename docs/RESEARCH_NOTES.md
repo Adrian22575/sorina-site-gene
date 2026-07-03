@@ -197,3 +197,16 @@ Applied decisions:
 - Keep the owner control as two simple selects: first accepted time and last accepted time.
 - Continue generating 15-minute appointment choices automatically so Sorina does not have to manage individual minute values.
 - Store the setting in the existing protected `site_settings` table instead of adding another backend service.
+
+## 2026-07-03 Service Duration Booking Pass
+
+Sources checked:
+
+- FullCalendar event overlap docs: https://fullcalendar.io/docs/eventOverlap
+
+Applied decisions:
+
+- Treat appointment availability as interval overlap, not exact matching on the visible 15-minute start slot.
+- Keep 15-minute slot granularity for easy choosing, but block every start time that would intersect an existing appointment's service duration.
+- Recalculate public availability when the visitor changes the selected service because each service can have a different duration.
+- Apply the same overlap rule in admin so manual moves or owner-created appointments cannot create hidden conflicts.

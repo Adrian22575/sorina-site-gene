@@ -5,7 +5,9 @@ export const defaultBookingSettings = {
   end_time: '18:00',
 }
 
-function minutesFromTime(value) {
+export const defaultServiceDurationMinutes = 60
+
+export function minutesFromTime(value) {
   const time = normalizeTime(value)
   if (!time) return null
   const [hour, minute] = time.split(':').map(Number)
@@ -60,6 +62,33 @@ export function bookingSlots(settings = null) {
 }
 
 export const defaultBookingSlots = generateDefaultBookingSlots()
+
+export function durationMinutesFromText(value) {
+  const cleanValue = cleanString(value, 80).toLowerCase()
+  const hourMatch = cleanValue.match(/(\d+(?:[.,]\d+)?)\s*(?:h|ora|ore)/)
+  const minuteMatch = cleanValue.match(/(\d+)\s*(?:m|min|minute)/)
+  const plainNumberMatch = cleanValue.match(/\d+/)
+  const hours = hourMatch ? Math.round(Number(hourMatch[1].replace(',', '.')) * 60) : 0
+  const minutes = minuteMatch ? Number(minuteMatch[1]) : 0
+  const total = hours + minutes
+  const fallbackTotal = plainNumberMatch ? Number(plainNumberMatch[0]) : defaultServiceDurationMinutes
+  const duration = total || fallbackTotal
+
+  return duration >= 15 && duration <= 480 ? duration : defaultServiceDurationMinutes
+}
+
+export function serviceDurationMinutes(service, serviceDurations = new Map()) {
+  const title = cleanString(typeof service === 'string' ? service : service?.title, 160)
+  if (title && serviceDurations.has(title)) return serviceDurations.get(title)
+  if (typeof service === 'object' && service !== null) return durationMinutesFromText(service.duration)
+  return defaultServiceDurationMinutes
+}
+
+export function intervalsOverlap(firstStart, firstDuration, secondStart, secondDuration) {
+  const firstEnd = firstStart + firstDuration
+  const secondEnd = secondStart + secondDuration
+  return firstStart < secondEnd && secondStart < firstEnd
+}
 
 export function sendJson(response, status, payload) {
   response.statusCode = status
@@ -220,17 +249,55 @@ export async function bookedTimesForDateExcept(config, date, appointmentId = '')
   return new Set(rows.map((row) => normalizeTime(row.preferred_time)).filter(Boolean))
 }
 
-export async function availabilityForDate(config, date) {
+export async function bookedAppointmentsForDate(config, date, appointmentId = '') {
+  const endpoint = new URL(`${config.baseUrl}/rest/v1/appointments`)
+  endpoint.searchParams.set('select', 'id,preferred_time,status,service')
+  endpoint.searchParams.set('preferred_date', `eq.${date}`)
+  endpoint.searchParams.set('status', 'neq.cancelled')
+  if (appointmentId) endpoint.searchParams.set('id', `neq.${appointmentId}`)
+
+  const result = await fetch(endpoint, {
+    headers: {
+      apikey: config.serviceRoleKey,
+      Authorization: `Bearer ${config.serviceRoleKey}`,
+    },
+  })
+
+  if (!result.ok) throw new Error('Sloturile ocupate nu au putut fi citite.')
+
+  return result.json()
+}
+
+export function slotOverlapsAppointments(time, durationMinutes, appointments = [], serviceDurations = new Map()) {
+  const startMinutes = minutesFromTime(time)
+  if (startMinutes === null) return false
+
+  return appointments.some((appointment) => {
+    const appointmentStart = minutesFromTime(appointment.preferred_time)
+    if (appointmentStart === null) return false
+    const appointmentDuration = serviceDurationMinutes(appointment.service, serviceDurations)
+    return intervalsOverlap(startMinutes, durationMinutes, appointmentStart, appointmentDuration)
+  })
+}
+
+export async function availabilityForDate(config, date, serviceTitle = '', serviceDurations = new Map()) {
   const bookingSettings = await readBookingSettings(config)
   const slots = bookingSlots(bookingSettings)
-  const bookedTimes = isValidDate(date) && !isPastDate(date)
-    ? await bookedTimesForDate(config, date)
-    : new Set()
+  const durationMinutes = serviceDurationMinutes(serviceTitle, serviceDurations)
+  const bookedAppointments = isValidDate(date) && !isPastDate(date)
+    ? await bookedAppointmentsForDate(config, date)
+    : []
 
-  return slots.map((time) => ({
-    time,
-    label: time,
-    is_booked: bookedTimes.has(time),
-    is_available: isValidDate(date) && !isPastDate(date) && !bookedTimes.has(time),
-  }))
+  const canBookDate = isValidDate(date) && !isPastDate(date)
+
+  return slots.map((time) => {
+    const isBooked = slotOverlapsAppointments(time, durationMinutes, bookedAppointments, serviceDurations)
+
+    return {
+      time,
+      label: time,
+      is_booked: isBooked,
+      is_available: canBookDate && !isBooked,
+    }
+  })
 }

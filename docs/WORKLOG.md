@@ -302,3 +302,11 @@
 - Calendar view shows a monthly grid, appointment chips inside each day, month navigation, today shortcut, and a selected-day agenda.
 - List view keeps the existing full editable appointment cards for moving clients, changing status, and editing notes.
 - Fixed the public booking success flow by keeping a stable form reference before the async request, so a saved appointment no longer shows a false `reset()` error.
+- Improved the calendar contrast after live review: calendar day cells now override generic admin button styling, and appointment chips use high-contrast text.
+
+## 2026-07-03 Service Duration Booking
+
+- Public booking availability now blocks overlapping intervals based on the selected service duration, not only the exact 15-minute start time.
+- The public booking form reloads available slots when the visitor changes either service or date.
+- Public appointment creation and admin appointment create/move now reject active appointments that would overlap another active appointment's service duration.
+- Service durations are parsed from owner-editable service duration text, with safe fallbacks for existing placeholder services.

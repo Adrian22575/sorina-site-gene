@@ -1253,7 +1253,7 @@ form button:disabled {
   text-transform: capitalize;
 }
 
-.admin-calendar-day {
+.admin-shell .admin-calendar-day {
   align-items: stretch;
   background: white;
   border: 0;
@@ -1269,6 +1269,15 @@ form button:disabled {
   text-align: left;
 }
 
+.admin-shell .admin-calendar-day:hover {
+  background: #fffaf2;
+}
+
+.admin-shell .admin-calendar-day:focus-visible {
+  outline: 3px solid rgba(111, 19, 38, 0.34);
+  outline-offset: -3px;
+}
+
 .admin-calendar-day:nth-child(7n) {
   border-right: 0;
 }
@@ -1277,16 +1286,17 @@ form button:disabled {
   border-bottom: 0;
 }
 
-.admin-calendar-day-muted {
+.admin-shell .admin-calendar-day-muted {
   background: #fcfaf7;
   color: rgba(45, 28, 18, 0.42);
 }
 
-.admin-calendar-day-filled {
+.admin-shell .admin-calendar-day-filled {
   background: #fffbf4;
 }
 
-.admin-calendar-day-selected {
+.admin-shell .admin-calendar-day-selected {
+  background: white;
   box-shadow: inset 0 0 0 2px var(--wine);
 }
 
@@ -1300,6 +1310,7 @@ form button:disabled {
   font-size: 14px;
   font-weight: 800;
   justify-content: space-between;
+  min-height: 20px;
 }
 
 .admin-calendar-date small {
@@ -1315,15 +1326,17 @@ form button:disabled {
   gap: 5px;
 }
 
-.admin-calendar-item {
-  background: rgba(111, 19, 38, 0.08);
-  border-left: 3px solid var(--wine);
+.admin-shell .admin-calendar-item {
+  background: var(--wine);
+  border: 1px solid rgba(111, 19, 38, 0.2);
+  border-left: 4px solid #d5a85f;
   border-radius: 6px;
-  color: var(--ink);
+  color: white;
   display: grid;
   gap: 1px;
   min-width: 0;
   padding: 6px 7px;
+  text-align: left;
 }
 
 .admin-calendar-item b,
@@ -1336,22 +1349,28 @@ form button:disabled {
 }
 
 .admin-calendar-item b {
+  color: white;
   font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
 }
 
 .admin-calendar-item em {
+  color: rgba(255, 255, 255, 0.88);
   font-size: 11px;
   font-style: normal;
+  line-height: 1.25;
 }
 
-.admin-calendar-item-confirmed,
+.admin-shell .admin-calendar-item-confirmed,
 .admin-day-agenda-item-confirmed {
-  border-color: #2f7d5b;
+  border-left-color: #58b487;
 }
 
-.admin-calendar-item-cancelled,
+.admin-shell .admin-calendar-item-cancelled,
 .admin-day-agenda-item-cancelled {
-  border-color: #9f8d81;
+  background: #7c7069;
+  border-left-color: #c9bcb2;
   opacity: 0.68;
 }
 
@@ -1961,7 +1980,7 @@ form button:disabled {
     padding: 8px 3px;
   }
 
-  .admin-calendar-day {
+  .admin-shell .admin-calendar-day {
     min-height: 82px;
     padding: 6px;
   }
@@ -1975,7 +1994,7 @@ form button:disabled {
     display: none;
   }
 
-  .admin-calendar-item {
+  .admin-shell .admin-calendar-item {
     border-left-width: 2px;
     padding: 4px 5px;
   }
