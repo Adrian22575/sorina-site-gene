@@ -173,6 +173,22 @@ const appointmentStatusOptions = [
   { value: 'cancelled', label: 'Anulata' },
 ]
 
+const appointmentFilterOptions = [
+  { value: 'all', label: 'Toate' },
+  { value: 'active', label: 'Active' },
+  { value: 'new', label: 'Noi' },
+  { value: 'contacted', label: 'Contactate' },
+  { value: 'confirmed', label: 'Confirmate' },
+  { value: 'cancelled', label: 'Anulate' },
+]
+
+const notificationStatusLabels = {
+  sent: 'Email trimis',
+  pending: 'Email programat',
+  failed: 'Email esuat',
+  skipped: 'Email sarit',
+}
+
 const monthLabelFormatter = new Intl.DateTimeFormat('ro-RO', {
   month: 'long',
   year: 'numeric',
@@ -252,6 +268,63 @@ function compareAppointments(first, second) {
 
 function appointmentStatusLabel(status) {
   return appointmentStatusOptions.find((option) => option.value === status)?.label || status || 'Noua'
+}
+
+function minutesFromTime(value) {
+  const match = String(value || '').match(/^(\d{2}):(\d{2})/)
+  if (!match) return null
+  return Number(match[1]) * 60 + Number(match[2])
+}
+
+function timeFromMinutes(value) {
+  const minutes = Math.max(0, Math.min(value, 24 * 60))
+  return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
+}
+
+function durationMinutesFromText(value) {
+  const cleanValue = String(value || '').toLowerCase()
+  const hourMatch = cleanValue.match(/(\d+(?:[.,]\d+)?)\s*(?:h|ora|ore)/)
+  const minuteMatch = cleanValue.match(/(\d+)\s*(?:m|min|minute)/)
+  const plainNumberMatch = cleanValue.match(/\d+/)
+  const hours = hourMatch ? Math.round(Number(hourMatch[1].replace(',', '.')) * 60) : 0
+  const minutes = minuteMatch ? Number(minuteMatch[1]) : 0
+  const duration = hours + minutes || (plainNumberMatch ? Number(plainNumberMatch[0]) : 60)
+
+  return duration >= 15 && duration <= 480 ? duration : 60
+}
+
+function serviceDurationForAppointment(appointment, services) {
+  const service = services.find((item) => item.title === appointment.service)
+  return durationMinutesFromText(service?.duration || appointment.duration || '')
+}
+
+function appointmentIntervalLabel(appointment, services) {
+  const startMinutes = minutesFromTime(appointment.preferred_time)
+  if (startMinutes === null) return appointment.preferred_time || 'Ora lipsa'
+  return `${appointment.preferred_time} - ${timeFromMinutes(startMinutes + serviceDurationForAppointment(appointment, services))}`
+}
+
+function appointmentDurationLabel(appointment, services) {
+  return `${serviceDurationForAppointment(appointment, services)} min`
+}
+
+function latestNotificationForAppointment(appointment) {
+  const logs = Array.isArray(appointment.notification_logs) ? appointment.notification_logs : []
+  return logs.find((log) => log.notification_type === 'new_appointment')
+    || logs.find((log) => log.status === 'failed')
+    || logs[0]
+    || null
+}
+
+function appointmentNotificationMeta(appointment) {
+  const log = latestNotificationForAppointment(appointment)
+  if (!log) return { label: 'Fara log email', tone: 'muted', detail: '' }
+
+  return {
+    label: notificationStatusLabels[log.status] || 'Email verificat',
+    tone: log.status || 'muted',
+    detail: log.error_message || '',
+  }
 }
 
 function slugify(value) {
@@ -350,6 +423,7 @@ function normalizeAppointment(appointment = {}) {
     internal_notes: appointment.internal_notes || '',
     created_at: appointment.created_at || '',
     updated_at: appointment.updated_at || '',
+    notification_logs: Array.isArray(appointment.notification_logs) ? appointment.notification_logs : [],
   }
 }
 
@@ -848,6 +922,7 @@ function AdminApp({ appointmentsOnly = false }) {
   const [services, setServices] = useState([])
   const [appointments, setAppointments] = useState([])
   const [appointmentView, setAppointmentView] = useState('calendar')
+  const [appointmentFilter, setAppointmentFilter] = useState('active')
   const [calendarMonth, setCalendarMonth] = useState(() => monthKeyFromDate())
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(() => bucharestDateString())
   const [notificationSettings, setNotificationSettings] = useState(defaultNotificationSettings)
@@ -1276,6 +1351,26 @@ function AdminApp({ appointmentsOnly = false }) {
         itemIndex === index ? normalizeAppointment(data.appointment) : currentAppointment
       )))
       setStatus({ state: 'success', message: 'Programarea a fost salvata.' })
+    } catch (error) {
+      setStatus({ state: 'error', message: error.message })
+    }
+  }
+
+  async function confirmAppointment(appointment) {
+    if (!appointment.id) return
+    setStatus({ state: 'loading', message: 'Se confirma programarea...' })
+
+    try {
+      const data = await adminRequest(`/api/admin/appointments?id=${encodeURIComponent(appointment.id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ ...appointment, status: 'confirmed' }),
+      })
+
+      if (!data.appointment) throw new Error('Serverul nu a returnat programarea salvata.')
+      setAppointments((current) => current.map((currentAppointment) => (
+        currentAppointment.id === appointment.id ? normalizeAppointment(data.appointment) : currentAppointment
+      )))
+      setStatus({ state: 'success', message: 'Programarea a fost confirmata.' })
     } catch (error) {
       setStatus({ state: 'error', message: error.message })
     }
@@ -1958,7 +2053,19 @@ function AdminApp({ appointmentsOnly = false }) {
   }
 
   const sortedAppointments = [...appointments].sort(compareAppointments)
-  const appointmentsByDate = sortedAppointments.reduce((groups, appointment) => {
+  const filteredAppointments = sortedAppointments.filter((appointment) => {
+    if (appointmentFilter === 'all') return true
+    if (appointmentFilter === 'active') return appointment.status !== 'cancelled'
+    return appointment.status === appointmentFilter
+  })
+  const appointmentsByDate = filteredAppointments.reduce((groups, appointment) => {
+    if (!appointment.preferred_date) return groups
+    const group = groups.get(appointment.preferred_date) || []
+    group.push(appointment)
+    groups.set(appointment.preferred_date, group)
+    return groups
+  }, new Map())
+  const allAppointmentsByDate = sortedAppointments.reduce((groups, appointment) => {
     if (!appointment.preferred_date) return groups
     const group = groups.get(appointment.preferred_date) || []
     group.push(appointment)
@@ -1969,6 +2076,7 @@ function AdminApp({ appointmentsOnly = false }) {
   const selectedDayAppointments = appointmentsByDate.get(selectedCalendarDate) || []
   const todayKey = bucharestDateString()
   const weekdayLabels = calendarDays.slice(0, 7).map(({ date }) => weekdayFormatter.format(date))
+  const selectedFilterLabel = appointmentFilterOptions.find((option) => option.value === appointmentFilter)?.label || 'Programari'
 
   if (!isLoggedIn) {
     return (
@@ -2265,6 +2373,15 @@ function AdminApp({ appointmentsOnly = false }) {
             </button>
             <button
               type="button"
+              className={appointmentView === 'day' ? 'admin-view-active' : ''}
+              onClick={() => setAppointmentView('day')}
+              role="tab"
+              aria-selected={appointmentView === 'day'}
+            >
+              <Clock size={16} /> Zi
+            </button>
+            <button
+              type="button"
               className={appointmentView === 'list' ? 'admin-view-active' : ''}
               onClick={() => setAppointmentView('list')}
               role="tab"
@@ -2295,6 +2412,18 @@ function AdminApp({ appointmentsOnly = false }) {
             </button>
           </div>
         </div>
+        <div className="admin-appointment-filters" aria-label="Filtre programari">
+          {appointmentFilterOptions.map((option) => (
+            <button
+              type="button"
+              className={appointmentFilter === option.value ? 'admin-filter-active' : ''}
+              key={option.value}
+              onClick={() => setAppointmentFilter(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
 
         {appointmentView === 'calendar' ? (
           <div className="admin-calendar-layout">
@@ -2305,6 +2434,8 @@ function AdminApp({ appointmentsOnly = false }) {
               <div className="admin-calendar-grid">
                 {calendarDays.map((day) => {
                   const dayAppointments = appointmentsByDate.get(day.key) || []
+                  const allDayAppointments = allAppointmentsByDate.get(day.key) || []
+                  const newCount = allDayAppointments.filter((appointment) => appointment.status === 'new').length
                   const isSelected = selectedCalendarDate === day.key
                   const isToday = todayKey === day.key
                   return (
@@ -2326,12 +2457,15 @@ function AdminApp({ appointmentsOnly = false }) {
                     >
                       <span className="admin-calendar-date">
                         {day.date.getDate()}
-                        {isToday ? <small>Azi</small> : null}
+                        <span>
+                          {newCount ? <small className="admin-calendar-new-count">{newCount} noi</small> : null}
+                          {isToday ? <small>Azi</small> : null}
+                        </span>
                       </span>
                       <span className="admin-calendar-items">
                         {dayAppointments.slice(0, 3).map((appointment) => (
                           <span className={`admin-calendar-item admin-calendar-item-${appointment.status}`} key={appointment.id || `${appointment.full_name}-${appointment.preferred_time}`}>
-                            <b>{appointment.preferred_time || '--:--'}</b>
+                            <b>{appointmentIntervalLabel(appointment, services)}</b>
                             <em>{appointment.full_name || 'Clienta'}</em>
                           </span>
                         ))}
@@ -2347,23 +2481,95 @@ function AdminApp({ appointmentsOnly = false }) {
               <div>
                 <p className="eyebrow">Zi selectata</p>
                 <h3>{formatRomanianDate(selectedCalendarDate)}</h3>
-                <span>{selectedDayAppointments.length ? `${selectedDayAppointments.length} programari` : 'Nicio programare'}</span>
+                <span>{selectedDayAppointments.length ? `${selectedDayAppointments.length} programari - ${selectedFilterLabel}` : `Nicio programare - ${selectedFilterLabel}`}</span>
               </div>
               <div className="admin-day-agenda-list">
-                {selectedDayAppointments.length ? selectedDayAppointments.map((appointment) => (
-                  <article className={`admin-day-agenda-item admin-day-agenda-item-${appointment.status}`} key={appointment.id || `${appointment.full_name}-${appointment.preferred_time}`}>
-                    <strong>{appointment.preferred_time || 'Ora lipsa'} · {appointment.full_name || 'Clienta'}</strong>
-                    <span>{appointment.service || 'Serviciu lipsa'}</span>
-                    <small>{appointmentStatusLabel(appointment.status)}{appointment.phone ? ` · ${appointment.phone}` : ''}</small>
-                  </article>
-                )) : (
+                {selectedDayAppointments.length ? selectedDayAppointments.map((appointment) => {
+                  const mailMeta = appointmentNotificationMeta(appointment)
+                  return (
+                    <article className={`admin-day-agenda-item admin-day-agenda-item-${appointment.status}`} key={appointment.id || `${appointment.full_name}-${appointment.preferred_time}`}>
+                      <strong>{appointmentIntervalLabel(appointment, services)} - {appointment.full_name || 'Clienta'}</strong>
+                      <span>{appointment.service || 'Serviciu lipsa'} - {appointmentDurationLabel(appointment, services)}</span>
+                      <small>{appointmentStatusLabel(appointment.status)}{appointment.phone ? ` - ${appointment.phone}` : ''}</small>
+                      <small className={`admin-mail-status admin-mail-status-${mailMeta.tone}`} title={mailMeta.detail || mailMeta.label}>
+                        {mailMeta.label}
+                      </small>
+                      {appointment.status === 'new' ? (
+                        <button type="button" className="admin-inline-action" onClick={() => confirmAppointment(appointment)} disabled={isBusy}>
+                          Confirma
+                        </button>
+                      ) : null}
+                    </article>
+                  )
+                }) : (
                   <p>Nu exista programari pentru aceasta zi.</p>
                 )}
               </div>
-              <button type="button" className="admin-secondary" onClick={() => setAppointmentView('list')}>
-                <ListChecks size={16} /> Editeaza in lista
-              </button>
+              <div className="admin-day-agenda-actions">
+                <button type="button" className="admin-secondary" onClick={() => setAppointmentView('day')}>
+                  <Clock size={16} /> Vezi ziua
+                </button>
+                <button type="button" className="admin-secondary" onClick={() => setAppointmentView('list')}>
+                  <ListChecks size={16} /> Editeaza in lista
+                </button>
+              </div>
             </aside>
+          </div>
+        ) : null}
+
+        {appointmentView === 'day' ? (
+          <div className="admin-day-timeline">
+            <div className="admin-day-timeline-header">
+              <div>
+                <p className="eyebrow">Agenda zilei</p>
+                <h3>{formatRomanianDate(selectedCalendarDate)}</h3>
+                <span>{selectedDayAppointments.length ? `${selectedDayAppointments.length} programari - ${selectedFilterLabel}` : `Nicio programare - ${selectedFilterLabel}`}</span>
+              </div>
+              <input
+                type="date"
+                value={selectedCalendarDate}
+                onChange={(event) => {
+                  const nextDate = event.target.value || bucharestDateString()
+                  setSelectedCalendarDate(nextDate)
+                  setCalendarMonth(monthKeyFromDate(localDateFromString(nextDate) || new Date()))
+                }}
+              />
+            </div>
+            <div className="admin-day-timeline-list">
+              {selectedDayAppointments.length ? selectedDayAppointments.map((appointment) => {
+                const mailMeta = appointmentNotificationMeta(appointment)
+                return (
+                  <article className={`admin-day-timeline-item admin-day-timeline-item-${appointment.status}`} key={appointment.id || `${appointment.full_name}-${appointment.preferred_time}`}>
+                    <div className="admin-day-timeline-time">
+                      <strong>{appointment.preferred_time || '--:--'}</strong>
+                      <span>{appointmentDurationLabel(appointment, services)}</span>
+                    </div>
+                    <div className="admin-day-timeline-card">
+                      <div className="admin-day-timeline-main">
+                        <strong>{appointment.full_name || 'Clienta'}</strong>
+                        <span>{appointmentIntervalLabel(appointment, services)} - {appointment.service || 'Serviciu lipsa'}</span>
+                        <small>{appointmentStatusLabel(appointment.status)}{appointment.phone ? ` - ${appointment.phone}` : ''}</small>
+                      </div>
+                      <div className="admin-day-timeline-actions">
+                        <span className={`admin-mail-status admin-mail-status-${mailMeta.tone}`} title={mailMeta.detail || mailMeta.label}>
+                          {mailMeta.label}
+                        </span>
+                        {appointment.status === 'new' ? (
+                          <button type="button" className="admin-secondary" onClick={() => confirmAppointment(appointment)} disabled={isBusy}>
+                            Confirma
+                          </button>
+                        ) : null}
+                        <button type="button" onClick={() => setAppointmentView('list')} className="admin-secondary">
+                          Editeaza
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                )
+              }) : (
+                <p className="admin-day-empty">Nu exista programari pentru aceasta zi.</p>
+              )}
+            </div>
           </div>
         ) : null}
 
@@ -2464,14 +2670,20 @@ function AdminApp({ appointmentsOnly = false }) {
 
         {appointmentView === 'list' ? (
         <div className="admin-service-list">
-          {sortedAppointments.map((appointment) => {
+          {filteredAppointments.map((appointment) => {
             const index = appointments.indexOf(appointment)
+            const mailMeta = appointmentNotificationMeta(appointment)
             return (
             <article className={`admin-service admin-appointment ${appointment.id ? '' : 'admin-service-new'}`} key={appointment.id || `appointment-${index}`}>
               {!appointment.id ? <AdminNewBadge /> : null}
               <div className="admin-appointment-meta">
-                <strong>{appointment.preferred_date || 'Data lipsa'} · {appointment.preferred_time || 'Ora lipsa'}</strong>
-                <span>{appointmentStatusLabel(appointment.status)}</span>
+                <strong>{appointment.preferred_date || 'Data lipsa'} - {appointmentIntervalLabel(appointment, services)}</strong>
+                <div>
+                  <span>{appointmentStatusLabel(appointment.status)}</span>
+                  <span className={`admin-mail-status admin-mail-status-${mailMeta.tone}`} title={mailMeta.detail || mailMeta.label}>
+                    {mailMeta.label}
+                  </span>
+                </div>
               </div>
               <div className="admin-service-grid">
                 <label>
@@ -2535,6 +2747,11 @@ function AdminApp({ appointmentsOnly = false }) {
                 <button type="button" onClick={() => saveAppointment(index)} disabled={isBusy}>
                   <Save size={16} /> {isBusy ? 'Se salveaza...' : 'Salveaza'}
                 </button>
+                {appointment.status === 'new' && appointment.id ? (
+                  <button type="button" className="admin-secondary" onClick={() => confirmAppointment(appointment)} disabled={isBusy}>
+                    Confirma
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   className="admin-secondary"

@@ -310,3 +310,12 @@
 - The public booking form reloads available slots when the visitor changes either service or date.
 - Public appointment creation and admin appointment create/move now reject active appointments that would overlap another active appointment's service duration.
 - Service durations are parsed from owner-editable service duration text, with safe fallbacks for existing placeholder services.
+
+## 2026-07-03 Admin Calendar Operations
+
+- Added status filters for the appointments admin: all, active, new, contacted, confirmed, and cancelled.
+- Added a dedicated day timeline view for the selected date with chronological appointment cards.
+- Calendar and day agenda now show start-end intervals based on service duration.
+- Days with new appointment requests display a compact "noi" badge.
+- Added quick confirm actions for new appointments in the agenda, day view, and list view.
+- Admin appointment reads now include recent notification logs, and the UI shows email status such as sent, scheduled, failed, skipped, or missing log.

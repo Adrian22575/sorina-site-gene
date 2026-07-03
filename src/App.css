@@ -1220,6 +1220,27 @@ form button:disabled {
   text-transform: capitalize;
 }
 
+.admin-appointment-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -4px 0 16px;
+}
+
+.admin-appointment-filters button {
+  background: white;
+  border: 1px solid var(--line-strong);
+  color: var(--soft-ink);
+  min-height: 34px;
+  padding: 0 12px;
+}
+
+.admin-appointment-filters .admin-filter-active {
+  background: #2d1c12;
+  border-color: #2d1c12;
+  color: white;
+}
+
 .admin-calendar-layout {
   display: grid;
   gap: 16px;
@@ -1313,12 +1334,24 @@ form button:disabled {
   min-height: 20px;
 }
 
+.admin-calendar-date > span {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
 .admin-calendar-date small {
   background: var(--wine);
   border-radius: 999px;
   color: white;
   font-size: 10px;
   padding: 3px 7px;
+}
+
+.admin-calendar-date .admin-calendar-new-count {
+  background: #d5a85f;
+  color: #2d1c12;
 }
 
 .admin-calendar-items {
@@ -1433,6 +1466,160 @@ form button:disabled {
   font-size: 12px;
 }
 
+.admin-day-agenda-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-inline-action {
+  min-height: 32px;
+  justify-self: start;
+  padding: 0 12px;
+}
+
+.admin-mail-status {
+  align-items: center;
+  background: #fbf8f4;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--soft-ink);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  min-height: 30px;
+  padding: 0 10px;
+}
+
+.admin-mail-status-sent,
+.admin-mail-status-pending {
+  background: #f0faf4;
+  border-color: rgba(47, 129, 88, 0.28);
+  color: #22623f;
+}
+
+.admin-mail-status-failed {
+  background: #fff1f0;
+  border-color: rgba(151, 42, 42, 0.24);
+  color: #8a2020;
+}
+
+.admin-mail-status-skipped,
+.admin-mail-status-muted {
+  background: #fbf8f4;
+  color: #7c7069;
+}
+
+.admin-day-timeline {
+  background: #fbf8f4;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding: 16px;
+}
+
+.admin-day-timeline-header {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.admin-day-timeline-header h3 {
+  font-size: 22px;
+  text-transform: capitalize;
+}
+
+.admin-day-timeline-header span,
+.admin-day-empty {
+  color: var(--soft-ink);
+  font-size: 13px;
+}
+
+.admin-day-timeline-header input {
+  max-width: 180px;
+}
+
+.admin-day-timeline-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-day-timeline-item {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 86px minmax(0, 1fr);
+}
+
+.admin-day-timeline-time {
+  border-right: 2px solid rgba(111, 19, 38, 0.16);
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+  padding: 12px 12px 12px 0;
+}
+
+.admin-day-timeline-time strong {
+  color: var(--wine);
+  font-size: 18px;
+}
+
+.admin-day-timeline-time span {
+  color: var(--soft-ink);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.admin-day-timeline-card {
+  align-items: center;
+  background: white;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--wine);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 13px 14px;
+}
+
+.admin-day-timeline-item-confirmed .admin-day-timeline-card {
+  border-left-color: #58b487;
+}
+
+.admin-day-timeline-item-cancelled .admin-day-timeline-card {
+  border-left-color: #c9bcb2;
+  opacity: 0.7;
+}
+
+.admin-day-timeline-main {
+  display: grid;
+  gap: 4px;
+}
+
+.admin-day-timeline-main strong {
+  color: var(--wine);
+  font-size: 16px;
+}
+
+.admin-day-timeline-main span,
+.admin-day-timeline-main small {
+  color: var(--soft-ink);
+  font-size: 13px;
+}
+
+.admin-day-timeline-actions,
+.admin-appointment-meta > div {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .admin-appointment-settings-header {
   align-items: center;
   display: flex;
@@ -1510,6 +1697,31 @@ form button:disabled {
   font-size: 12px;
   font-weight: 700;
   padding: 7px 11px;
+}
+
+.admin-appointment-meta .admin-mail-status {
+  font-weight: 800;
+  min-height: 32px;
+  padding: 0 10px;
+}
+
+.admin-appointment-meta .admin-mail-status-sent,
+.admin-appointment-meta .admin-mail-status-pending {
+  background: #f0faf4;
+  border-color: rgba(47, 129, 88, 0.28);
+  color: #22623f;
+}
+
+.admin-appointment-meta .admin-mail-status-failed {
+  background: #fff1f0;
+  border-color: rgba(151, 42, 42, 0.24);
+  color: #8a2020;
+}
+
+.admin-appointment-meta .admin-mail-status-skipped,
+.admin-appointment-meta .admin-mail-status-muted {
+  background: #fbf8f4;
+  color: #7c7069;
 }
 
 .admin-appointments-only {
@@ -1766,8 +1978,14 @@ form button:disabled {
   .admin-service-grid,
   .admin-result-grid,
   .admin-cropper,
-  .admin-calendar-layout {
+  .admin-calendar-layout,
+  .admin-day-timeline-card {
     grid-template-columns: 1fr;
+  }
+
+  .admin-day-timeline-actions,
+  .admin-appointment-meta > div {
+    justify-content: flex-start;
   }
 
   .admin-crop-actions {
@@ -1975,6 +2193,15 @@ form button:disabled {
     width: 100%;
   }
 
+  .admin-appointment-filters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-appointment-filters button {
+    width: 100%;
+  }
+
   .admin-calendar-weekdays span {
     font-size: 10px;
     padding: 8px 3px;
@@ -1989,9 +2216,15 @@ form button:disabled {
     font-size: 12px;
   }
 
-  .admin-calendar-date small,
+  .admin-calendar-date small:not(.admin-calendar-new-count),
   .admin-calendar-item em {
     display: none;
+  }
+
+  .admin-calendar-date .admin-calendar-new-count {
+    display: inline-flex;
+    font-size: 9px;
+    padding: 2px 5px;
   }
 
   .admin-shell .admin-calendar-item {
@@ -2002,5 +2235,40 @@ form button:disabled {
   .admin-calendar-item b,
   .admin-calendar-more {
     font-size: 10px;
+  }
+
+  .admin-day-timeline {
+    padding: 12px;
+  }
+
+  .admin-day-timeline-header {
+    align-items: stretch;
+  }
+
+  .admin-day-timeline-header input {
+    max-width: none;
+  }
+
+  .admin-day-timeline-item {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-day-timeline-time {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    grid-template-columns: auto auto;
+    justify-content: space-between;
+    padding: 0 0 8px;
+  }
+
+  .admin-day-timeline-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-day-timeline-actions button,
+  .admin-day-agenda-actions button,
+  .admin-inline-action {
+    width: 100%;
   }
 }

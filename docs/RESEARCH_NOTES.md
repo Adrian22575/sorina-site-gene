@@ -210,3 +210,18 @@ Applied decisions:
 - Keep 15-minute slot granularity for easy choosing, but block every start time that would intersect an existing appointment's service duration.
 - Recalculate public availability when the visitor changes the selected service because each service can have a different duration.
 - Apply the same overlap rule in admin so manual moves or owner-created appointments cannot create hidden conflicts.
+
+## 2026-07-03 Admin Calendar Operations Pass
+
+Sources checked:
+
+- FullCalendar time grid docs: https://fullcalendar.io/docs/timegrid-view
+- FullCalendar event overlap docs: https://fullcalendar.io/docs/eventOverlap
+- Resend email docs: https://resend.com/docs
+
+Applied decisions:
+
+- Add a day-focused timeline for operational work because monthly grids are better for orientation than detailed daily editing.
+- Keep the month view compact, but show start-end intervals now that service duration controls availability.
+- Add status filters and visible new-request badges so Sorina can find unconfirmed appointments quickly.
+- Surface notification log status in the appointment UI so email delivery problems are visible without opening database logs.

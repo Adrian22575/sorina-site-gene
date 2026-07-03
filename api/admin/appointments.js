@@ -111,6 +111,42 @@ async function listAppointments(config) {
   return result.json()
 }
 
+async function listAppointmentNotifications(config) {
+  const result = await supabaseBookingFetch(
+    config,
+    'appointment_notifications?select=appointment_id,notification_type,status,error_message,created_at,scheduled_for&order=created_at.desc&limit=600',
+  )
+
+  if (!result.ok) return new Map()
+
+  const rows = await result.json()
+  return rows.reduce((groups, row) => {
+    if (!row.appointment_id) return groups
+    const group = groups.get(row.appointment_id) || []
+    group.push({
+      notification_type: row.notification_type,
+      status: row.status,
+      error_message: row.error_message || '',
+      created_at: row.created_at,
+      scheduled_for: row.scheduled_for,
+    })
+    groups.set(row.appointment_id, group)
+    return groups
+  }, new Map())
+}
+
+async function listAppointmentsWithNotifications(config) {
+  const [appointments, notificationGroups] = await Promise.all([
+    listAppointments(config),
+    listAppointmentNotifications(config),
+  ])
+
+  return appointments.map((appointment) => ({
+    ...appointment,
+    notification_logs: notificationGroups.get(appointment.id) || [],
+  }))
+}
+
 async function createAppointment(config, body) {
   const payload = appointmentPayload(body)
   const bookingSettings = await readBookingSettings(config)
@@ -203,7 +239,7 @@ export default async function handler(request, response) {
     if (request.method === 'GET') {
       const bookingSettings = await readBookingSettings(config)
       return sendJson(response, 200, {
-        appointments: await listAppointments(config),
+        appointments: await listAppointmentsWithNotifications(config),
         notifications: await readNotificationSettings(config),
         booking_settings: bookingSettings,
         slots: bookingSlots(bookingSettings),
