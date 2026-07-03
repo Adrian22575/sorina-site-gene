@@ -1944,6 +1944,8 @@ function AdminApp({ appointmentsOnly = false }) {
         </p>
       ) : null}
 
+      {!appointmentsOnly ? (
+        <>
       <section className="admin-panel" id="admin-services">
         <div className="admin-panel-header">
           <h2>Lista servicii</h2>
@@ -2136,7 +2138,10 @@ function AdminApp({ appointmentsOnly = false }) {
           </label>
         </div>
       </section>
+        </>
+      ) : null}
 
+      {appointmentsOnly ? (
       <section className="admin-panel" id="admin-appointments">
         <div className="admin-panel-header">
           <h2>Programari cliente</h2>
@@ -2337,7 +2342,10 @@ function AdminApp({ appointmentsOnly = false }) {
           ))}
         </div>
       </section>
+      ) : null}
 
+      {!appointmentsOnly ? (
+        <>
       <section className="admin-panel" id="admin-gallery">
         <div className="admin-panel-header">
           <h2>Galerie foto</h2>
@@ -2694,6 +2702,8 @@ function AdminApp({ appointmentsOnly = false }) {
           ))}
         </div>
       </section>
+        </>
+      ) : null}
     </main>
   )
 }
