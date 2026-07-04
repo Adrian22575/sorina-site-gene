@@ -165,10 +165,11 @@ function appointmentActionLinks(appointment) {
 
   if (confirmToken) {
     links.push({
-      label: 'Confirma din email',
+      label: 'Deschide si confirma',
       href: `${baseUrl}/api/admin/appointments?action=confirm&id=${appointmentId}&token=${encodeURIComponent(confirmToken)}`,
       primary: true,
     })
+    return links
   }
 
   links.push({

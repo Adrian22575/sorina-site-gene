@@ -2655,7 +2655,7 @@ function AdminApp({ appointmentsOnly = false }) {
                         {mailMeta.label}
                       </small>
                       {appointment.status === 'new' ? (
-                        <button type="button" className="admin-inline-action" onClick={() => confirmAppointment(appointment)} disabled={isBusy}>
+                        <button type="button" className="admin-inline-action admin-confirm-button" onClick={() => confirmAppointment(appointment)} disabled={isBusy}>
                           Confirma
                         </button>
                       ) : null}
@@ -2715,7 +2715,7 @@ function AdminApp({ appointmentsOnly = false }) {
                           {mailMeta.label}
                         </span>
                         {appointment.status === 'new' ? (
-                          <button type="button" className="admin-secondary" onClick={() => confirmAppointment(appointment)} disabled={isBusy}>
+                          <button type="button" className="admin-confirm-button" onClick={() => confirmAppointment(appointment)} disabled={isBusy}>
                             Confirma
                           </button>
                         ) : null}
@@ -3000,7 +3000,7 @@ function AdminApp({ appointmentsOnly = false }) {
                     <Save size={16} /> {isBusy ? 'Se salveaza...' : 'Salveaza'}
                   </button>
                   {appointmentDraft.status === 'new' && appointmentDraft.id ? (
-                    <button type="button" className="admin-secondary" onClick={() => confirmAppointment(appointmentDraft)} disabled={isBusy}>
+                    <button type="button" className="admin-confirm-button" onClick={() => confirmAppointment(appointmentDraft)} disabled={isBusy}>
                       Confirma
                     </button>
                   ) : null}
@@ -3012,8 +3012,11 @@ function AdminApp({ appointmentsOnly = false }) {
                   >
                     Anuleaza
                   </button>
+                </div>
+                <div className="admin-appointment-delete-zone">
+                  <span>Stergere definitiva</span>
                   <button type="button" className="admin-danger" onClick={deleteAppointmentDraft} disabled={isBusy}>
-                    <Trash2 size={16} /> Sterge
+                    <Trash2 size={16} /> Sterge programarea
                   </button>
                 </div>
               </form>

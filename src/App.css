@@ -1235,6 +1235,18 @@ form button:disabled {
   color: #8a1226;
 }
 
+.admin-shell .admin-confirm-button {
+  background: #1f7a4d;
+  border: 1px solid #1f7a4d;
+  box-shadow: 0 8px 18px rgba(31, 122, 77, 0.18);
+  color: white;
+}
+
+.admin-shell .admin-confirm-button:hover {
+  background: #17643e;
+  border-color: #17643e;
+}
+
 .admin-order-controls {
   align-items: center;
   background: #fbf8f4;
@@ -1851,6 +1863,30 @@ form button:disabled {
 
 .admin-appointment-editor-actions .admin-danger {
   margin-left: auto;
+}
+
+.admin-appointment-delete-zone {
+  align-items: center;
+  background: #fff8f7;
+  border: 1px solid rgba(138, 18, 38, 0.16);
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 12px 14px;
+}
+
+.admin-appointment-delete-zone span {
+  color: var(--soft-ink);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.admin-shell .admin-appointment-delete-zone .admin-danger {
+  background: transparent;
+  border: 1px solid rgba(138, 18, 38, 0.36);
+  color: #8a1226;
+  min-height: 36px;
 }
 
 .admin-appointment-settings-header {
@@ -2638,6 +2674,15 @@ form button:disabled {
 
   .admin-appointment-editor-header button,
   .admin-appointment-editor-actions button {
+    width: 100%;
+  }
+
+  .admin-appointment-delete-zone {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-appointment-delete-zone button {
     width: 100%;
   }
 }
