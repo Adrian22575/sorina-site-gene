@@ -9,6 +9,17 @@ export const fallbackContent = {
       schedule: 'Program de completat',
       map_label: 'Harta sau zona de acces',
     },
+    legal: {
+      owner_name: 'Nume legal de completat',
+      company_id: 'CUI / identificator fiscal de completat',
+      legal_address: 'Adresa legala de completat',
+      legal_email: 'Email legal de completat',
+      legal_phone: 'Telefon de completat',
+      data_retention: 'Datele de programare sunt pastrate doar cat este necesar pentru gestionarea programarii si comunicarea cu clienta.',
+      privacy_intro: 'Aceasta politica explica modul in care sunt folosite datele trimise prin formularul de programare.',
+      terms_intro: 'Acesti termeni descriu modul de folosire a site-ului si procesul de solicitare a unei programari.',
+      cancellation_policy: 'Pentru anulare sau reprogramare, clienta este rugata sa contacteze studioul cat mai repede.',
+    },
   },
   gallery: [
     { title: 'Fotografie principala din galerie', image_url: '', alt_text: 'Fotografie principala din galerie' },
@@ -282,6 +293,20 @@ export function contactPayload(body) {
     instagram: cleanString(body.instagram, 120),
     schedule: cleanString(body.schedule, 180),
     map_label: cleanString(body.map_label, 180),
+  }
+}
+
+export function legalPayload(body) {
+  return {
+    owner_name: cleanString(body.owner_name, 180),
+    company_id: cleanString(body.company_id, 120),
+    legal_address: cleanString(body.legal_address, 240),
+    legal_email: cleanString(body.legal_email, 180),
+    legal_phone: cleanString(body.legal_phone, 80),
+    data_retention: cleanString(body.data_retention, 900),
+    privacy_intro: cleanString(body.privacy_intro, 900),
+    terms_intro: cleanString(body.terms_intro, 900),
+    cancellation_policy: cleanString(body.cancellation_policy, 900),
   }
 }
 

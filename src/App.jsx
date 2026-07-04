@@ -77,6 +77,18 @@ const defaultContact = {
   map_label: 'Harta sau zona de acces',
 }
 
+const defaultLegal = {
+  owner_name: 'Nume legal de completat',
+  company_id: 'CUI / identificator fiscal de completat',
+  legal_address: 'Adresa legala de completat',
+  legal_email: 'Email legal de completat',
+  legal_phone: 'Telefon de completat',
+  data_retention: 'Datele de programare sunt pastrate doar cat este necesar pentru gestionarea programarii si comunicarea cu clienta.',
+  privacy_intro: 'Aceasta politica explica modul in care sunt folosite datele trimise prin formularul de programare.',
+  terms_intro: 'Acesti termeni descriu modul de folosire a site-ului si procesul de solicitare a unei programari.',
+  cancellation_policy: 'Pentru anulare sau reprogramare, clienta este rugata sa contacteze studioul cat mai repede.',
+}
+
 const defaultFaqs = [
   {
     question: 'Cat rezista extensiile de gene?',
@@ -412,6 +424,10 @@ function normalizeContent(data) {
     contact: {
       ...defaultContact,
       ...(data.settings?.contact || {}),
+    },
+    legal: {
+      ...defaultLegal,
+      ...(data.settings?.legal || {}),
     },
     gallery: Array.isArray(data.gallery) && data.gallery.length ? data.gallery.map(normalizeOrderedItem) : defaultGallery,
     results: Array.isArray(data.results) && data.results.length ? data.results.map(normalizeOrderedItem) : defaultResults,
@@ -827,6 +843,118 @@ function SectionIntro({ eyebrow, title, children, centered = false }) {
   )
 }
 
+function LegalShell({ children, legal, title, intro }) {
+  return (
+    <main className="legal-page">
+      <header className="site-header">
+        <a className="brand" href="/">Sorina - Studio de Gene</a>
+        <nav aria-label="Navigatie legal">
+          <a href="/">Site</a>
+          <a href="/politica-de-confidentialitate">Confidentialitate</a>
+          <a href="/termeni-si-conditii">Termeni</a>
+        </nav>
+        <Button href="/#booking" tone="outline">Programare</Button>
+      </header>
+      <section className="legal-hero">
+        <p className="eyebrow">Legal</p>
+        <h1>{title}</h1>
+        <p>{intro}</p>
+      </section>
+      <section className="legal-content">
+        <aside className="legal-card">
+          <strong>Operator</strong>
+          <span>{legal.owner_name}</span>
+          <span>{legal.company_id}</span>
+          <span>{legal.legal_address}</span>
+          <span>{legal.legal_email}</span>
+          <span>{legal.legal_phone}</span>
+        </aside>
+        <div className="legal-copy">
+          {children}
+        </div>
+      </section>
+      <footer className="site-footer">
+        <div>
+          <strong>Sorina - Studio de Gene</strong>
+          <p>Pagini legale pentru folosirea site-ului si formularului de programare.</p>
+        </div>
+        <nav aria-label="Pagini legale in subsol">
+          <a href="/">Site</a>
+          <a href="/politica-de-confidentialitate">Politica de confidentialitate</a>
+          <a href="/termeni-si-conditii">Termeni si conditii</a>
+        </nav>
+      </footer>
+    </main>
+  )
+}
+
+function LegalPage({ type }) {
+  const [content, setContent] = useState(() => normalizeContent({}))
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadContent() {
+      try {
+        const response = await fetch('/api/content')
+        const data = await response.json()
+        if (isMounted) setContent(normalizeContent(data))
+      } catch {
+        if (isMounted) setContent(normalizeContent({}))
+      }
+    }
+
+    loadContent()
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  const legal = content.legal
+
+  if (type === 'terms') {
+    return (
+      <LegalShell
+        legal={legal}
+        title="Termeni si conditii"
+        intro={legal.terms_intro}
+      >
+        <h2>Folosirea site-ului</h2>
+        <p>Site-ul prezinta serviciile Sorina - Studio de Gene si permite trimiterea unei cereri de programare. Informatiile de pe site pot fi actualizate periodic.</p>
+        <h2>Programari</h2>
+        <p>Trimiterea formularului nu garanteaza automat programarea. Cererea este verificata, iar programarea devine finala dupa confirmarea transmisa de studio.</p>
+        <h2>Anulari si reprogramari</h2>
+        <p>{legal.cancellation_policy}</p>
+        <h2>Servicii si preturi</h2>
+        <p>Serviciile, duratele si preturile afisate pot fi actualizate. Daca exista neclaritati, detaliile finale se confirma inainte de programare.</p>
+        <h2>Contact</h2>
+        <p>Pentru intrebari despre programari, modificari sau informatii afisate pe site, foloseste datele de contact din aceasta pagina sau din sectiunea Contact.</p>
+      </LegalShell>
+    )
+  }
+
+  return (
+    <LegalShell
+      legal={legal}
+      title="Politica de confidentialitate"
+      intro={legal.privacy_intro}
+    >
+      <h2>Ce date colectam</h2>
+      <p>Prin formularul de programare pot fi colectate numele, numarul de telefon, adresa de email, serviciul ales, data si ora preferata, mesajul transmis si date tehnice minime necesare functionarii formularului.</p>
+      <h2>De ce folosim datele</h2>
+      <p>Datele sunt folosite pentru preluarea cererii, contactarea clientei, confirmarea programarii, reprogramare, anulare si comunicari strict legate de serviciul solicitat.</p>
+      <h2>Cine poate primi datele</h2>
+      <p>Datele pot fi procesate prin furnizorii tehnici folositi pentru functionarea site-ului, baza de date si emailuri automate, precum Vercel, Supabase si Resend, in masura necesara pentru aceste servicii.</p>
+      <h2>Cat timp pastram datele</h2>
+      <p>{legal.data_retention}</p>
+      <h2>Drepturile tale</h2>
+      <p>Poti cere acces la datele tale, corectarea lor, stergerea lor, restrictionarea prelucrarii sau te poti opune anumitor prelucrari, in limitele legii aplicabile. Pentru solicitari, foloseste emailul legal afisat pe aceasta pagina.</p>
+      <h2>Formularul de programare</h2>
+      <p>Daca nu furnizezi datele cerute in formular, studioul nu poate prelua si confirma cererea de programare.</p>
+    </LegalShell>
+  )
+}
+
 function ServiceCard({ service }) {
   return (
     <article className="service-card" id={`service-${slugify(service.title)}`}>
@@ -912,6 +1040,7 @@ function AdminNewBadge() {
 const adminSections = [
   { id: 'admin-services', label: 'Servicii', shortLabel: 'Servicii', icon: Sparkles },
   { id: 'admin-contact', label: 'Contact/program', shortLabel: 'Contact', icon: Phone },
+  { id: 'admin-legal', label: 'Legal', shortLabel: 'Legal', icon: ShieldCheck },
   { id: 'admin-gallery', label: 'Galerie foto', shortLabel: 'Galerie', icon: Heart },
   { id: 'admin-results', label: 'Before/After', shortLabel: 'Rezultate', icon: Crop },
   { id: 'admin-reviews', label: 'Recenzii', shortLabel: 'Recenzii', icon: Star },
@@ -1219,6 +1348,13 @@ function AdminApp({ appointmentsOnly = false }) {
     }))
   }
 
+  function updateLegal(field, value) {
+    setContent((current) => ({
+      ...current,
+      legal: { ...current.legal, [field]: value },
+    }))
+  }
+
   function updateNotificationSetting(field, value) {
     setNotificationSettings((current) => ({ ...current, [field]: value }))
   }
@@ -1406,6 +1542,21 @@ function AdminApp({ appointmentsOnly = false }) {
       })
       setContent((current) => normalizeContent({ ...current, settings: data.settings }))
       setStatus({ state: 'success', message: 'Datele de contact au fost salvate.' })
+    } catch (error) {
+      setStatus({ state: 'error', message: error.message })
+    }
+  }
+
+  async function saveLegal() {
+    setStatus({ state: 'loading', message: 'Se salveaza datele legale...' })
+
+    try {
+      const data = await adminRequest('/api/admin/content', {
+        method: 'PATCH',
+        body: JSON.stringify({ settings: { legal: content.legal } }),
+      })
+      setContent((current) => normalizeContent({ ...current, settings: data.settings }))
+      setStatus({ state: 'success', message: 'Datele legale au fost salvate.' })
     } catch (error) {
       setStatus({ state: 'error', message: error.message })
     }
@@ -2503,6 +2654,60 @@ function AdminApp({ appointmentsOnly = false }) {
           <label className="full">
             Text harta/zona acces
             <input value={content.contact.map_label} onChange={(event) => updateContact('map_label', event.target.value)} />
+          </label>
+        </div>
+      </section>
+
+      <section className="admin-panel" id="admin-legal">
+        <div className="admin-panel-header">
+          <div>
+            <h2>Legal</h2>
+            <p>Datele acestea apar in Politica de confidentialitate si Termeni si conditii.</p>
+          </div>
+          <button type="button" onClick={saveLegal} disabled={isBusy}>
+            <Save size={16} /> {isBusy ? 'Se salveaza...' : 'Salveaza legal'}
+          </button>
+        </div>
+        <div className="admin-legal-note">
+          <strong>Nota importanta</strong>
+          <span>Textele sunt un punct de pornire practic, nu consultanta juridica. Sorina ar trebui sa le verifice inainte de lansarea publica.</span>
+        </div>
+        <div className="admin-service-grid">
+          <label>
+            Nume legal / firma
+            <input value={content.legal.owner_name} onChange={(event) => updateLegal('owner_name', event.target.value)} />
+          </label>
+          <label>
+            CUI / identificator fiscal
+            <input value={content.legal.company_id} onChange={(event) => updateLegal('company_id', event.target.value)} />
+          </label>
+          <label>
+            Email legal
+            <input type="email" value={content.legal.legal_email} onChange={(event) => updateLegal('legal_email', event.target.value)} />
+          </label>
+          <label>
+            Telefon legal
+            <input value={content.legal.legal_phone} onChange={(event) => updateLegal('legal_phone', event.target.value)} />
+          </label>
+          <label className="full">
+            Adresa legala / punct lucru
+            <input value={content.legal.legal_address} onChange={(event) => updateLegal('legal_address', event.target.value)} />
+          </label>
+          <label className="full">
+            Introducere politica de confidentialitate
+            <textarea rows="3" value={content.legal.privacy_intro} onChange={(event) => updateLegal('privacy_intro', event.target.value)} />
+          </label>
+          <label className="full">
+            Perioada pastrare date programari
+            <textarea rows="3" value={content.legal.data_retention} onChange={(event) => updateLegal('data_retention', event.target.value)} />
+          </label>
+          <label className="full">
+            Introducere termeni si conditii
+            <textarea rows="3" value={content.legal.terms_intro} onChange={(event) => updateLegal('terms_intro', event.target.value)} />
+          </label>
+          <label className="full">
+            Politica anulare / reprogramare
+            <textarea rows="3" value={content.legal.cancellation_policy} onChange={(event) => updateLegal('cancellation_policy', event.target.value)} />
           </label>
         </div>
       </section>
@@ -3841,11 +4046,11 @@ function PublicApp() {
           <label className="consent-field full">
             <input name="privacy_consent" type="checkbox" value="yes" required />
             <span>
-              Sunt de acord ca datele trimise sa fie folosite pentru contactarea mea si confirmarea programarii.
+              Sunt de acord ca datele trimise sa fie folosite pentru contactarea mea si confirmarea programarii, conform <a href="/politica-de-confidentialitate">Politicii de confidentialitate</a>.
             </span>
           </label>
           <p className="privacy-note full">
-            Datele sunt folosite doar pentru programare. Politica de confidentialitate va fi completata inainte de lansarea publica.
+            Datele sunt folosite pentru gestionarea cererii de programare si comunicarile strict legate de aceasta.
           </p>
           <button type="submit" disabled={bookingStatus.state === 'loading'}>
             {bookingStatus.state === 'loading' ? 'Se trimite...' : 'Trimite cererea'} <ArrowRight size={16} />
@@ -3897,6 +4102,8 @@ function PublicApp() {
         </div>
         <nav aria-label="Servicii in subsol">
           {serviceList.map((service) => <a key={service.title} href="#services">{service.title}</a>)}
+          <a href="/politica-de-confidentialitate">Politica de confidentialitate</a>
+          <a href="/termeni-si-conditii">Termeni si conditii</a>
         </nav>
       </footer>
     </main>
@@ -3906,5 +4113,7 @@ function PublicApp() {
 export default function App() {
   if (window.location.pathname === '/admin/programari') return <AdminApp appointmentsOnly />
   if (window.location.pathname === '/admin') return <AdminApp />
+  if (window.location.pathname === '/politica-de-confidentialitate') return <LegalPage type="privacy" />
+  if (window.location.pathname === '/termeni-si-conditii') return <LegalPage type="terms" />
   return <PublicApp />
 }

@@ -6,6 +6,7 @@ import {
   getSupabaseConfig,
   hasServiceRoleAccess,
   itemPayload,
+  legalPayload,
   listSiteContent,
   readBody,
   sendJson,
@@ -27,28 +28,30 @@ function isAuthorized(request) {
 }
 
 async function saveSettings(config, settings) {
-  if (!settings.contact) return
+  const payloads = []
+  if (settings.contact) payloads.push({ key: 'contact', value: contactPayload(settings.contact), error: 'Datele de contact nu au putut fi salvate.' })
+  if (settings.legal) payloads.push({ key: 'legal', value: legalPayload(settings.legal), error: 'Datele legale nu au putut fi salvate.' })
 
-  const payload = {
-    key: 'contact',
-    value: contactPayload(settings.contact),
-  }
+  await Promise.all(payloads.map(async (payload) => {
+    const result = await supabaseFetch(config, `site_settings?key=eq.${payload.key}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify({ key: payload.key, value: payload.value }),
+    })
 
-  const result = await supabaseFetch(config, 'site_settings?key=eq.contact', {
-    method: 'PATCH',
-    headers: { Prefer: 'return=representation' },
-    body: JSON.stringify(payload),
-  })
+    if (result.ok) {
+      const rows = await result.json().catch(() => [])
+      if (Array.isArray(rows) && rows.length > 0) return
+    }
 
-  if (!result.ok) {
     const insertResult = await supabaseFetch(config, 'site_settings', {
       method: 'POST',
       headers: { Prefer: 'return=representation' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ key: payload.key, value: payload.value }),
     })
 
-    if (!insertResult.ok) throw new Error('Datele de contact nu au putut fi salvate.')
-  }
+    if (!insertResult.ok) throw new Error(payload.error)
+  }))
 }
 
 async function createItem(config, type, body) {

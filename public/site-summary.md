@@ -17,6 +17,10 @@ Site-ul se adreseaza femeilor care cauta extensii de gene, laminare, un rezultat
 
 Programarea se face prin formularul de pe site. Formularul cere nume, telefon, serviciu, data preferata, ora optionala, email optional si detalii suplimentare. Cererea este confirmata manual. Datele sunt folosite pentru contactarea si confirmarea programarii.
 
+## Pagini legale
+
+Site-ul include o Politica de confidentialitate si o pagina de Termeni si conditii. Acestea explica folosirea datelor trimise prin formularul de programare, confirmarea manuala a cererilor si regulile generale pentru anulare sau reprogramare. Datele juridice ale operatorului trebuie completate de proprietar in admin.
+
 ## Intrebari frecvente
 
 Extensiile de gene rezista in functie de ritmul natural de crestere, tipul genelor si ingrijirea de acasa. Aplicarea trebuie sa fie confortabila. Extensiile sunt gandite sa respecte genele naturale atunci cand lungimea, grosimea si densitatea sunt alese corect. Inainte de programare este recomandat ca zona ochilor sa fie curata, fara machiaj si fara produse uleioase.
