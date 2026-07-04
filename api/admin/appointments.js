@@ -21,6 +21,7 @@ import {
   readNotificationSettings,
   replaceAppointmentReminder,
   saveNotificationSettings,
+  sendClientConfirmedEmail,
   sendTestNotificationEmail,
   verifyAppointmentActionToken,
 } from '../_email.js'
@@ -169,6 +170,7 @@ async function createAppointment(config, body) {
   if (!result.ok) return { status: result.status === 409 ? 409 : 400, error: 'Programarea nu a putut fi creata.' }
 
   const appointment = (await result.json())[0]
+  if (appointment.status === 'confirmed') await sendClientConfirmedEmail(config, appointment)
   await replaceAppointmentReminder(config, appointment)
   return { status: 201, appointment }
 }
@@ -204,6 +206,9 @@ async function updateAppointment(config, id, body) {
   if (!result.ok) return { status: result.status === 409 ? 409 : 400, error: 'Programarea nu a putut fi salvata.' }
 
   const appointment = (await result.json())[0]
+  if (current.status !== 'confirmed' && appointment.status === 'confirmed') {
+    await sendClientConfirmedEmail(config, appointment)
+  }
   await replaceAppointmentReminder(config, appointment)
   return { status: 200, appointment }
 }

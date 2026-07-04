@@ -334,3 +334,4 @@
 - Appointment reminders are now scheduled only after a booking is confirmed, not immediately when a public request is created.
 - Added signed email actions for Sorina: confirm directly from the email or open the appointment in `/admin/programari`.
 - The daily cron also checks upcoming confirmed appointments and schedules missing reminders within Resend's 30-day scheduling window.
+- Added an immediate confirmation email for the client when an appointment first becomes confirmed.

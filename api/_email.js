@@ -372,6 +372,17 @@ async function cancelExistingAppointmentReminder(config, appointmentId) {
   }))
 }
 
+async function hasSentNotification(config, appointmentId, type) {
+  const result = await supabaseBookingFetch(
+    config,
+    `appointment_notifications?appointment_id=eq.${encodeURIComponent(appointmentId)}&notification_type=eq.${encodeURIComponent(type)}&status=eq.sent&select=id&limit=1`,
+  )
+
+  if (!result.ok) return false
+  const rows = await result.json()
+  return rows.length > 0
+}
+
 function zonedDateTimeToUtc(date, time, timeZone = bookingTimeZone) {
   if (!isValidDate(date) || !normalizeTime(time)) return null
 
@@ -460,6 +471,42 @@ export async function sendTestNotificationEmail(config, settingsInput = {}) {
     id: result.data?.id || '',
     to: settings.email,
     usage: result.usage || {},
+  }
+}
+
+export async function sendClientConfirmedEmail(config, appointment) {
+  if (!appointment?.id || !isValidEmail(appointment.email)) return { skipped: true, reason: 'Clienta nu are email valid.' }
+
+  const notificationType = 'client_confirmed'
+  if (await hasSentNotification(config, appointment.id, notificationType)) {
+    return { skipped: true, reason: 'Confirmarea catre clienta a fost deja trimisa.' }
+  }
+
+  const subject = 'Programarea ta la Sorina a fost confirmata'
+  const result = await sendResendEmail({
+    to: appointment.email,
+    subject,
+    html: clientAppointmentHtml(
+      subject,
+      appointment,
+      'Buna! Programarea ta a fost confirmata. Te asteptam la data si ora de mai jos.',
+    ),
+    idempotencyKey: `client-confirmed-${appointment.id}-${appointment.preferred_date}-${normalizeTime(appointment.preferred_time)}`,
+  })
+
+  await logNotification(config, {
+    appointment_id: appointment.id,
+    notification_type: notificationType,
+    recipient_email: appointment.email,
+    resend_email_id: result.data?.id || null,
+    status: result.data?.id ? 'sent' : (result.skipped ? 'skipped' : 'failed'),
+    error_message: result.reason || result.error || '',
+  })
+
+  return {
+    ok: Boolean(result.data?.id || result.skipped),
+    skipped: Boolean(result.skipped),
+    error: result.reason || result.error || '',
   }
 }
 
