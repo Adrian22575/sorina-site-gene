@@ -10,6 +10,14 @@
     {
       "source": "/admin/programari",
       "destination": "/index.html"
+    },
+    {
+      "source": "/politica-de-confidentialitate",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/termeni-si-conditii",
+      "destination": "/index.html"
     }
   ],
   "crons": [
