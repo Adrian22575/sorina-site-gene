@@ -1663,8 +1663,12 @@ form button:disabled {
 }
 
 .admin-appointment-editor form {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
   display: grid;
   gap: 16px;
+  grid-template-columns: 1fr;
   padding: 18px;
 }
 
@@ -1711,8 +1715,26 @@ form button:disabled {
 }
 
 .admin-appointment-editor-actions {
+  align-items: center;
   border-top: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  grid-column: 1 / -1;
+  justify-content: flex-end;
   padding-top: 14px;
+}
+
+.admin-appointment-editor-actions button,
+.admin-appointment-editor-header button {
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 0 15px;
+  width: auto;
+}
+
+.admin-appointment-editor-actions .admin-danger {
+  margin-left: auto;
 }
 
 .admin-appointment-settings-header {
