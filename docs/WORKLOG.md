@@ -327,3 +327,10 @@
 - Added a focused appointment editor dialog so Sorina edits one appointment at a time.
 - `Adauga programare` now opens the same focused editor instead of inserting a draft card into a long list.
 - Added basic modal keyboard behavior and a warning when the owner notification email is missing.
+
+## 2026-07-04 Booking Email Reliability
+
+- Fixed scheduled Resend reminder payloads to use the API field `scheduled_at`.
+- Appointment reminders are now scheduled only after a booking is confirmed, not immediately when a public request is created.
+- Added signed email actions for Sorina: confirm directly from the email or open the appointment in `/admin/programari`.
+- The daily cron also checks upcoming confirmed appointments and schedules missing reminders within Resend's 30-day scheduling window.

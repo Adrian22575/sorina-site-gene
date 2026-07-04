@@ -7,6 +7,7 @@ import {
   AtSign,
   Award,
   CalendarDays,
+  CheckCircle2,
   ChevronLeft,
   ChevronDown,
   ChevronRight,
@@ -25,6 +26,7 @@ import {
   Sparkles,
   Star,
   Trash2,
+  X,
 } from 'lucide-react'
 import heroImage from './assets/hero.png'
 import './App.css'
@@ -923,6 +925,7 @@ function AdminApp({ appointmentsOnly = false }) {
   const [appointmentView, setAppointmentView] = useState('calendar')
   const [appointmentFilter, setAppointmentFilter] = useState('active')
   const [appointmentDraft, setAppointmentDraft] = useState(null)
+  const [openedAppointmentParam, setOpenedAppointmentParam] = useState('')
   const [calendarMonth, setCalendarMonth] = useState(() => monthKeyFromDate())
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(() => bucharestDateString())
   const [notificationSettings, setNotificationSettings] = useState(defaultNotificationSettings)
@@ -1073,6 +1076,24 @@ function AdminApp({ appointmentsOnly = false }) {
 
     return () => observer.disconnect()
   }, [isLoggedIn])
+
+  useEffect(() => {
+    if (!isLoggedIn || !appointmentsOnly || !appointments.length) return
+
+    const appointmentId = new URLSearchParams(window.location.search).get('appointment') || ''
+    if (!appointmentId || appointmentId === openedAppointmentParam) return
+
+    const appointment = appointments.find((item) => item.id === appointmentId)
+    if (!appointment) return
+
+    openAppointmentEditor(appointment)
+    setSelectedCalendarDate(appointment.preferred_date || selectedCalendarDate)
+    if (appointment.preferred_date) {
+      setCalendarMonth(monthKeyFromDate(localDateFromString(appointment.preferred_date) || new Date()))
+    }
+    setAppointmentView('calendar')
+    setOpenedAppointmentParam(appointmentId)
+  }, [appointments, appointmentsOnly, isLoggedIn, openedAppointmentParam, selectedCalendarDate])
 
   function selectAdminSection(sectionId) {
     setActiveAdminSection(sectionId)
@@ -3201,6 +3222,7 @@ function PublicApp() {
   const [serviceList, setServiceList] = useState(defaultServices)
   const [siteContent, setSiteContent] = useState(() => normalizeContent({}))
   const [bookingStatus, setBookingStatus] = useState({ state: 'idle', message: '' })
+  const [showBookingNotice, setShowBookingNotice] = useState(false)
   const [selectedService, setSelectedService] = useState('')
   const [selectedDate, setSelectedDate] = useState('')
   const [selectedTime, setSelectedTime] = useState('')
@@ -3304,6 +3326,7 @@ function PublicApp() {
       return
     }
 
+    setShowBookingNotice(false)
     setBookingStatus({ state: 'loading', message: 'Se trimite cererea...' })
 
     const formData = new FormData(form)
@@ -3330,7 +3353,9 @@ function PublicApp() {
         state: 'success',
         message: 'Cererea a fost trimisa. Sorina te va contacta pentru confirmare.',
       })
+      setShowBookingNotice(true)
     } catch (error) {
+      setShowBookingNotice(false)
       setBookingStatus({
         state: 'error',
         message: error.message || 'A aparut o eroare. Incearca din nou.',
@@ -3652,13 +3677,33 @@ function PublicApp() {
           <button type="submit" disabled={bookingStatus.state === 'loading'}>
             {bookingStatus.state === 'loading' ? 'Se trimite...' : 'Trimite cererea'} <ArrowRight size={16} />
           </button>
-          {bookingStatus.message ? (
+          {bookingStatus.message && bookingStatus.state !== 'success' ? (
             <p className={`form-status form-status-${bookingStatus.state}`} role="status" aria-live="polite">
               {bookingStatus.message}
             </p>
           ) : null}
         </form>
       </section>
+
+      {showBookingNotice ? (
+        <div className="booking-confirmation-popup" role="status" aria-live="polite">
+          <span className="booking-confirmation-icon" aria-hidden="true">
+            <CheckCircle2 size={22} />
+          </span>
+          <div>
+            <strong>Cererea a fost trimisa</strong>
+            <p>Sorina te va contacta pentru confirmarea finala a programarii.</p>
+          </div>
+          <button
+            type="button"
+            className="booking-confirmation-close"
+            aria-label="Inchide confirmarea"
+            onClick={() => setShowBookingNotice(false)}
+          >
+            <X size={18} />
+          </button>
+        </div>
+      ) : null}
 
       <section className="section contact" id="contact">
         <ImageSlot label={contact.map_label} />

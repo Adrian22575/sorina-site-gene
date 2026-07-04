@@ -22,6 +22,7 @@ import {
   replaceAppointmentReminder,
   saveNotificationSettings,
   sendTestNotificationEmail,
+  verifyAppointmentActionToken,
 } from '../_email.js'
 
 const statuses = new Set(['new', 'contacted', 'confirmed', 'cancelled'])
@@ -221,14 +222,99 @@ async function deleteAppointment(config, id) {
   return { status: 200, ok: true }
 }
 
+function sendHtml(response, status, html) {
+  response.statusCode = status
+  response.setHeader('Content-Type', 'text/html; charset=utf-8')
+  response.setHeader('Cache-Control', 'no-store')
+  response.end(html)
+}
+
+function adminAppointmentUrl(id) {
+  return `/admin/programari?appointment=${encodeURIComponent(id)}`
+}
+
+function actionResultHtml({ title, message, appointmentId }) {
+  const link = appointmentId ? adminAppointmentUrl(appointmentId) : '/admin/programari'
+
+  return `<!doctype html>
+<html lang="ro">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>${title}</title>
+    <style>
+      body{margin:0;background:#f7f1eb;color:#241917;font-family:Arial,sans-serif;line-height:1.5}
+      main{min-height:100vh;display:grid;place-items:center;padding:24px}
+      section{max-width:520px;background:#fffaf6;border:1px solid #eaded7;border-radius:14px;box-shadow:0 20px 55px rgba(52,24,29,.14);padding:28px}
+      h1{color:#7a1024;font-family:Georgia,serif;font-size:28px;margin:0 0 12px}
+      p{margin:0 0 20px}
+      a{display:inline-block;background:#7a1024;color:white;text-decoration:none;font-weight:700;border-radius:999px;padding:12px 16px}
+    </style>
+  </head>
+  <body>
+    <main>
+      <section>
+        <h1>${title}</h1>
+        <p>${message}</p>
+        <a href="${link}">Deschide programarea</a>
+      </section>
+    </main>
+  </body>
+</html>`
+}
+
+async function confirmAppointmentFromEmail(config, request, response) {
+  const appointmentId = cleanString(request.query.id, 120)
+  const token = cleanString(request.query.token, 160)
+
+  if (!verifyAppointmentActionToken(appointmentId, 'confirm', token)) {
+    return sendHtml(response, 403, actionResultHtml({
+      title: 'Link invalid',
+      message: 'Linkul de confirmare nu este valid sau a fost generat pentru alta programare.',
+      appointmentId,
+    }))
+  }
+
+  const current = await readAppointment(config, appointmentId)
+  if (!current) {
+    return sendHtml(response, 404, actionResultHtml({
+      title: 'Programarea nu exista',
+      message: 'Programarea nu mai exista in sistem.',
+      appointmentId,
+    }))
+  }
+
+  if (current.status === 'cancelled') {
+    return sendHtml(response, 409, actionResultHtml({
+      title: 'Programare anulata',
+      message: 'Aceasta programare este anulata si nu poate fi confirmata din email.',
+      appointmentId,
+    }))
+  }
+
+  const result = current.status === 'confirmed'
+    ? { status: 200, appointment: current }
+    : await updateAppointment(config, appointmentId, { ...current, status: 'confirmed' })
+
+  if (!result.appointment) {
+    return sendHtml(response, result.status || 400, actionResultHtml({
+      title: 'Confirmarea nu a reusit',
+      message: result.error || 'Programarea nu a putut fi confirmata.',
+      appointmentId,
+    }))
+  }
+
+  return sendHtml(response, 200, actionResultHtml({
+    title: 'Programare confirmata',
+    message: 'Programarea a fost confirmata. Reminder-ele se vor trimite automat la momentele corecte.',
+    appointmentId,
+  }))
+}
+
 export default async function handler(request, response) {
   if (!['GET', 'POST', 'PATCH', 'DELETE'].includes(request.method)) {
     response.setHeader('Allow', 'GET, POST, PATCH, DELETE')
     return sendJson(response, 405, { error: 'Metoda nu este permisa.' })
-  }
-
-  if (!isAuthorized(request)) {
-    return sendJson(response, 401, { error: 'Parola de admin nu este valida sau nu este configurata.' })
   }
 
   const config = getSupabaseBookingConfig()
@@ -236,6 +322,14 @@ export default async function handler(request, response) {
   if (!hasBookingConfig(config)) return sendJson(response, 503, { error: 'SUPABASE_SERVICE_ROLE_KEY nu este o cheie service_role valida.' })
 
   try {
+    if (request.method === 'GET' && cleanString(request.query.action, 40) === 'confirm') {
+      return confirmAppointmentFromEmail(config, request, response)
+    }
+
+    if (!isAuthorized(request)) {
+      return sendJson(response, 401, { error: 'Parola de admin nu este valida sau nu este configurata.' })
+    }
+
     if (request.method === 'GET') {
       const bookingSettings = await readBookingSettings(config)
       return sendJson(response, 200, {

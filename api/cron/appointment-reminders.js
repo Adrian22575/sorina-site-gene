@@ -1,5 +1,5 @@
 import { getSupabaseBookingConfig, hasBookingConfig, sendJson } from '../_booking.js'
-import { sendTomorrowAppointmentDigest } from '../_email.js'
+import { ensureUpcomingAppointmentReminders, sendTomorrowAppointmentDigest } from '../_email.js'
 
 function isAuthorizedCron(request) {
   const secret = process.env.CRON_SECRET || ''
@@ -23,7 +23,12 @@ export default async function handler(request, response) {
   if (!hasBookingConfig(config)) return sendJson(response, 503, { error: 'SUPABASE_SERVICE_ROLE_KEY nu este o cheie service_role valida.' })
 
   try {
-    return sendJson(response, 200, await sendTomorrowAppointmentDigest(config))
+    const [digest, reminders] = await Promise.all([
+      sendTomorrowAppointmentDigest(config),
+      ensureUpcomingAppointmentReminders(config),
+    ])
+
+    return sendJson(response, 200, { ok: digest.ok !== false, digest, reminders })
   } catch (error) {
     return sendJson(response, 500, { error: error.message || 'Notificarile nu au putut fi trimise.' })
   }

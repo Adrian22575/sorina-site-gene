@@ -1,9 +1,11 @@
+import crypto from 'node:crypto'
 import {
   bookingTimeZone,
   cleanString,
   isValidDate,
   normalizeTime,
   supabaseBookingFetch,
+  todayInBucharest,
   tomorrowInBucharest,
 } from './_booking.js'
 
@@ -17,6 +19,7 @@ const defaultNotificationSettings = {
 }
 
 const activeStatuses = new Set(['new', 'contacted', 'confirmed'])
+const reminderStatuses = new Set(['confirmed'])
 
 export function normalizeNotificationSettings(settings = {}) {
   const email = cleanString(settings.email || process.env.NOTIFICATION_EMAIL || '', 180)
@@ -95,7 +98,80 @@ function appointmentTitle(appointment) {
   return `${name} - ${date} ${time}`
 }
 
-function appointmentHtml(title, appointment, intro) {
+function publicBaseUrl() {
+  const explicitUrl = cleanString(process.env.PUBLIC_SITE_URL || '', 300)
+  const vercelUrl = cleanString(process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL || '', 300)
+  const rawUrl = explicitUrl || (vercelUrl ? `https://${vercelUrl.replace(/^https?:\/\//, '')}` : '')
+  return rawUrl.replace(/\/$/, '')
+}
+
+function actionSecret() {
+  return process.env.APPOINTMENT_ACTION_SECRET
+    || process.env.ADMIN_PASSWORD
+    || process.env.CRON_SECRET
+    || process.env.SUPABASE_SERVICE_ROLE_KEY
+    || ''
+}
+
+export function appointmentActionToken(appointmentId, action = 'confirm') {
+  const id = cleanString(appointmentId, 120)
+  const secret = actionSecret()
+  if (!id || !secret) return ''
+
+  return crypto
+    .createHmac('sha256', secret)
+    .update(`${cleanString(action, 40)}:${id}`)
+    .digest('base64url')
+}
+
+export function verifyAppointmentActionToken(appointmentId, action, token) {
+  const expected = appointmentActionToken(appointmentId, action)
+  const received = cleanString(token, 120)
+  if (!expected || !received) return false
+
+  const expectedBuffer = Buffer.from(expected)
+  const receivedBuffer = Buffer.from(received)
+  return expectedBuffer.length === receivedBuffer.length && crypto.timingSafeEqual(expectedBuffer, receivedBuffer)
+}
+
+function appointmentActionLinks(appointment) {
+  const baseUrl = publicBaseUrl()
+  if (!baseUrl || !appointment?.id) return []
+
+  const appointmentId = encodeURIComponent(appointment.id)
+  const confirmToken = appointmentActionToken(appointment.id, 'confirm')
+  const links = []
+
+  if (confirmToken) {
+    links.push({
+      label: 'Confirma din email',
+      href: `${baseUrl}/api/admin/appointments?action=confirm&id=${appointmentId}&token=${encodeURIComponent(confirmToken)}`,
+      primary: true,
+    })
+  }
+
+  links.push({
+    label: 'Deschide programarea',
+    href: `${baseUrl}/admin/programari?appointment=${appointmentId}`,
+    primary: false,
+  })
+
+  return links
+}
+
+function emailActionsHtml(actions = []) {
+  if (!actions.length) return ''
+
+  return `
+    <div style="margin:22px 0 6px">
+      ${actions.map((action) => `
+        <a href="${escapeHtml(action.href)}" style="display:inline-block;margin:0 10px 10px 0;padding:12px 16px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px;border:1px solid #7a1024;background:${action.primary ? '#7a1024' : '#fffaf6'};color:${action.primary ? '#ffffff' : '#7a1024'}">${escapeHtml(action.label)}</a>
+      `).join('')}
+    </div>
+  `
+}
+
+function appointmentHtml(title, appointment, intro, actions = []) {
   const rows = [
     ['Clienta', appointment.full_name],
     ['Telefon', appointment.phone],
@@ -120,6 +196,7 @@ function appointmentHtml(title, appointment, intro) {
           </tr>
         `).join('')}
       </table>
+      ${emailActionsHtml(actions)}
       <p style="font-size:12px;color:#705f58;margin-top:18px">Email automat din site-ul Sorina Lash Studio.</p>
     </div>
   `
@@ -243,7 +320,7 @@ async function sendResendEmail({ to, subject, html, scheduledAt, idempotencyKey 
     html,
   }
 
-  if (scheduledAt) body.scheduledAt = scheduledAt
+  if (scheduledAt) body.scheduled_at = scheduledAt
 
   return resendRequest('emails', {
     method: 'POST',
@@ -341,7 +418,7 @@ export async function sendNewAppointmentEmail(config, appointment) {
   const result = await sendResendEmail({
     to: settings.email,
     subject,
-    html: appointmentHtml(subject, appointment, 'A intrat o cerere noua de programare.'),
+    html: appointmentHtml(subject, appointment, 'A intrat o cerere noua de programare.', appointmentActionLinks(appointment)),
     idempotencyKey: `new-${appointment.id}`,
   })
 
@@ -392,6 +469,7 @@ export async function replaceAppointmentReminder(config, appointment) {
 
   const settings = await readNotificationSettings(config)
   if (!activeStatuses.has(appointment.status || 'new')) return
+  if (!reminderStatuses.has(appointment.status || 'new')) return
 
   const ownerReminderDate = reminderDateForAppointment(appointment)
   if (settings.notify_before && settings.email && ownerReminderDate) {
@@ -485,6 +563,40 @@ async function appointmentsForDate(config, date) {
 
   if (!result.ok) throw new Error('Programarile pentru sumar nu au putut fi citite.')
   return result.json()
+}
+
+function dateAfterDays(dateValue, days) {
+  if (!isValidDate(dateValue)) return dateValue
+  const [year, month, day] = dateValue.split('-').map(Number)
+  const date = new Date(Date.UTC(year, month - 1, day + days))
+  return date.toISOString().slice(0, 10)
+}
+
+async function upcomingConfirmedAppointments(config) {
+  const startDate = todayInBucharest()
+  const endDate = dateAfterDays(startDate, 30)
+  const result = await supabaseBookingFetch(
+    config,
+    `appointments?preferred_date=gte.${startDate}&preferred_date=lte.${endDate}&status=eq.confirmed&select=id,full_name,phone,email,service,preferred_date,preferred_time,message,status,internal_notes&order=preferred_date.asc,preferred_time.asc&limit=300`,
+  )
+
+  if (!result.ok) throw new Error('Programarile confirmate pentru remindere nu au putut fi citite.')
+  return result.json()
+}
+
+export async function ensureUpcomingAppointmentReminders(config) {
+  const appointments = await upcomingConfirmedAppointments(config)
+  let scheduled = 0
+
+  await Promise.allSettled(appointments.map(async (appointment) => {
+    const rows = await reminderRows(config, appointment.id)
+    if (rows.some((row) => row.status === 'pending')) return
+
+    await replaceAppointmentReminder(config, appointment)
+    scheduled += 1
+  }))
+
+  return { checked: appointments.length, scheduled }
 }
 
 export async function sendTomorrowAppointmentDigest(config) {
