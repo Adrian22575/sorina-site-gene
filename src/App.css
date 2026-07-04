@@ -712,6 +712,38 @@ textarea {
   width: 100%;
 }
 
+.booking-service-duration {
+  align-items: center;
+  background: #fbf8f4;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--wine);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 7px;
+  justify-self: start;
+  min-height: 32px;
+  padding: 0 11px;
+}
+
+.booking-selected-interval {
+  align-items: center;
+  background: white;
+  border: 1px solid rgba(111, 19, 38, 0.24);
+  border-radius: 8px;
+  color: var(--wine);
+  display: inline-flex;
+  flex-wrap: wrap;
+  font-size: 13px;
+  font-weight: 800;
+  gap: 8px;
+  justify-self: start;
+  line-height: 1.4;
+  margin: 0;
+  padding: 10px 12px;
+}
+
 textarea {
   resize: vertical;
 }

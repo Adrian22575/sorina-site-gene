@@ -3286,6 +3286,15 @@ function PublicApp() {
 
   const activePromotion = siteContent.promotions[0] || defaultPromotions[0]
   const contact = siteContent.contact
+  const selectedServiceDetails = serviceList.find((service) => service.title === selectedService)
+  const selectedServiceDurationMinutes = selectedServiceDetails?.duration
+    ? durationMinutesFromText(selectedServiceDetails.duration)
+    : 0
+  const selectedTimeMinutes = minutesFromTime(selectedTime)
+  const selectedBookingInterval =
+    selectedTimeMinutes !== null && selectedServiceDurationMinutes
+      ? `${selectedTime} - ${timeFromMinutes(selectedTimeMinutes + selectedServiceDurationMinutes)}`
+      : ''
 
   async function submitBooking(event) {
     event.preventDefault()
@@ -3566,8 +3575,17 @@ function PublicApp() {
               required
             >
               <option value="" disabled>Alege serviciul</option>
-              {serviceList.map((service) => <option key={service.title}>{service.title}</option>)}
+              {serviceList.map((service) => (
+                <option key={service.title} value={service.title}>
+                  {service.duration ? `${service.title} - ${service.duration}` : service.title}
+                </option>
+              ))}
             </select>
+            {selectedServiceDetails?.duration ? (
+              <span className="booking-service-duration" aria-live="polite">
+                <Clock size={15} /> Durata estimata: {selectedServiceDetails.duration}
+              </span>
+            ) : null}
           </label>
           <label>
             Data preferata
@@ -3603,6 +3621,11 @@ function PublicApp() {
                 </button>
               ))}
             </div>
+            {selectedBookingInterval ? (
+              <p className="booking-selected-interval" aria-live="polite">
+                <Clock size={15} /> Programarea ta: {selectedBookingInterval}
+              </p>
+            ) : null}
             <input name="preferred_time" type="hidden" value={selectedTime} />
           </div>
           <label>
