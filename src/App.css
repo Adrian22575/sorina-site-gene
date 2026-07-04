@@ -1884,6 +1884,21 @@ form button:disabled {
   font-size: 13px;
 }
 
+.admin-notification-email-card {
+  align-items: end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(240px, 1fr) auto;
+  margin-top: 16px;
+}
+
+.admin-notification-email-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
 .admin-booking-note {
   align-self: end;
 }
@@ -2192,11 +2207,13 @@ form button:disabled {
   .admin-cropper,
   .admin-calendar-layout,
   .admin-day-timeline-card,
+  .admin-notification-email-card,
   .admin-appointment-editor-grid {
     grid-template-columns: 1fr;
   }
 
   .admin-day-timeline-actions,
+  .admin-notification-email-actions,
   .admin-appointment-meta > div {
     justify-content: flex-start;
   }

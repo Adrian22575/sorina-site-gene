@@ -335,3 +335,5 @@
 - Added signed email actions for Sorina: confirm directly from the email or open the appointment in `/admin/programari`.
 - The daily cron also checks upcoming confirmed appointments and schedules missing reminders within Resend's 30-day scheduling window.
 - Added an immediate confirmation email for the client when an appointment first becomes confirmed.
+- Email test now also saves notification settings, and missing owner email creates a visible skipped notification log for new appointments.
+- Split the appointment notification admin into a clear email save/test area and separate notification preference saving.

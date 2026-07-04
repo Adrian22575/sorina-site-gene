@@ -423,7 +423,19 @@ function reminderDateForAppointment(appointment, minutesBefore = 60) {
 
 export async function sendNewAppointmentEmail(config, appointment) {
   const settings = await readNotificationSettings(config)
-  if (!settings.notify_new || !settings.email) return
+  if (!settings.notify_new || !settings.email) {
+    await logNotification(config, {
+      appointment_id: appointment.id,
+      notification_type: 'new_appointment',
+      recipient_email: settings.email || 'not-configured',
+      resend_email_id: null,
+      status: 'skipped',
+      error_message: settings.notify_new
+        ? 'Emailul Sorinei nu este configurat pentru notificari.'
+        : 'Notificarea pentru programare noua este dezactivata.',
+    })
+    return
+  }
 
   const subject = `Programare noua: ${appointmentTitle(appointment)}`
   const result = await sendResendEmail({

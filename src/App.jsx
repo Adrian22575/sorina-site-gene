@@ -1327,7 +1327,7 @@ function AdminApp({ appointmentsOnly = false }) {
     }
   }
 
-  async function saveNotificationSettings() {
+  async function persistNotificationSettings(successMessage) {
     setStatus({ state: 'loading', message: 'Se salveaza notificarile...' })
 
     try {
@@ -1336,10 +1336,18 @@ function AdminApp({ appointmentsOnly = false }) {
         body: JSON.stringify({ notifications: notificationSettings }),
       })
       setNotificationSettings(normalizeNotificationSettings(data.notifications))
-      setStatus({ state: 'success', message: 'Setarile de notificari au fost salvate.' })
+      setStatus({ state: 'success', message: successMessage })
     } catch (error) {
       setStatus({ state: 'error', message: error.message })
     }
+  }
+
+  async function saveNotificationSettings() {
+    await persistNotificationSettings('Preferintele de notificari au fost salvate.')
+  }
+
+  async function saveNotificationEmail() {
+    await persistNotificationSettings('Emailul pentru notificari a fost salvat.')
   }
 
   async function saveBookingSettings() {
@@ -1366,6 +1374,7 @@ function AdminApp({ appointmentsOnly = false }) {
         method: 'PATCH',
         body: JSON.stringify({ test_email: true, notifications: notificationSettings }),
       })
+      if (data.notifications) setNotificationSettings(normalizeNotificationSettings(data.notifications))
       const usage = data.test?.usage || {}
       const usageText = [
         usage.daily_quota ? `zi: ${usage.daily_quota}` : '',
@@ -2415,12 +2424,6 @@ function AdminApp({ appointmentsOnly = false }) {
             <a className="admin-link-button" href="/email-previews.html" target="_blank" rel="noreferrer">
               <ExternalLink size={16} /> Preview emailuri
             </a>
-            <button type="button" className="admin-secondary" onClick={saveNotificationSettings} disabled={isBusy}>
-              <AtSign size={16} /> Salveaza notificari
-            </button>
-            <button type="button" className="admin-secondary" onClick={sendTestNotificationEmail} disabled={isBusy || !notificationSettings.email}>
-              <AtSign size={16} /> Trimite test
-            </button>
             <button type="button" onClick={addAppointment} disabled={isBusy}>
               <Plus size={16} /> Adauga programare
             </button>
@@ -2485,7 +2488,7 @@ function AdminApp({ appointmentsOnly = false }) {
         {!notificationSettings.email ? (
           <div className="admin-notification-warning">
             <strong>Email notificari lipsa</strong>
-            <span>Adauga emailul Sorinei mai jos si trimite un test, altfel programarile noi nu au unde sa fie anuntate.</span>
+            <span>Adauga emailul Sorinei mai jos si apasa Salveaza email, altfel programarile noi nu au unde sa fie anuntate.</span>
           </div>
         ) : null}
 
@@ -2675,16 +2678,48 @@ function AdminApp({ appointmentsOnly = false }) {
         </div>
 
         <div className="admin-service admin-appointment-settings">
-          <div className="admin-service-grid">
-            <label className="full">
-              Email pentru notificari
+          <div className="admin-appointment-settings-header">
+            <div>
+              <h3>Email notificari</h3>
+              <p>Adresa la care Sorina primeste programarile noi, reminder-ele si emailul test.</p>
+            </div>
+            <span><AtSign size={15} /> {notificationSettings.email ? 'Setat' : 'Lipsa'}</span>
+          </div>
+          <div className="admin-notification-email-card">
+            <label>
+              Adresa Sorina
               <input
                 type="email"
                 value={notificationSettings.email}
                 placeholder="email@sorina.ro"
                 onChange={(event) => updateNotificationSetting('email', event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault()
+                    saveNotificationEmail()
+                  }
+                }}
               />
             </label>
+            <div className="admin-notification-email-actions">
+              <button type="button" className="admin-secondary" onClick={saveNotificationEmail} disabled={isBusy || !notificationSettings.email}>
+                <Save size={16} /> Salveaza email
+              </button>
+              <button type="button" className="admin-secondary" onClick={sendTestNotificationEmail} disabled={isBusy || !notificationSettings.email}>
+                <AtSign size={16} /> Trimite test
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="admin-service admin-appointment-settings">
+          <div className="admin-appointment-settings-header">
+            <div>
+              <h3>Preferinte notificari</h3>
+              <p>Alege ce emailuri automate se trimit dupa ce adresa Sorinei este salvata.</p>
+            </div>
+          </div>
+          <div className="admin-service-grid">
             <label className="admin-check">
               <input
                 type="checkbox"
@@ -2729,6 +2764,11 @@ function AdminApp({ appointmentsOnly = false }) {
               <strong>Limita Resend Free</strong>
               <span>3.000 emailuri/luna si 100 emailuri/zi. Daca se depaseste limita, notificarile pot sa nu mai fie trimise pana la resetarea limitei sau pana la upgrade/plan platit.</span>
             </div>
+          </div>
+          <div className="admin-row-actions">
+            <button type="button" className="admin-secondary" onClick={saveNotificationSettings} disabled={isBusy}>
+              <Save size={16} /> Salveaza preferintele
+            </button>
           </div>
         </div>
 

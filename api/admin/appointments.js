@@ -353,8 +353,9 @@ export default async function handler(request, response) {
         return sendJson(response, 400, { error: 'Adresa de email pentru test nu este valida.' })
       }
 
+      const savedSettings = await saveNotificationSettings(config, testSettings)
       const testResult = await sendTestNotificationEmail(config, testSettings)
-      return sendJson(response, 200, { ok: true, test: testResult })
+      return sendJson(response, 200, { ok: true, notifications: savedSettings, test: testResult })
     }
 
     if (body.booking_settings) {
