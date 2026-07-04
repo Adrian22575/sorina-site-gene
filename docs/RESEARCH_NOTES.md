@@ -240,3 +240,18 @@ Applied decisions:
 - Use a focused dialog for one appointment at a time so Sorina edits only the selected client without scanning unrelated cards.
 - Add basic dialog keyboard behavior: focus starts inside the editor, Tab cycles inside it, and Escape closes it.
 - Show a warning when the notification email is missing because booking success without owner email creates hidden operational risk.
+
+## 2026-07-04 Legal Page Public Copy Review
+
+Sources checked:
+
+- GDPR Regulation (EU) 2016/679, Articles 12 and 13: https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng
+- Autoritatea Nationala de Supraveghere a Prelucrarii Datelor cu Caracter Personal: https://www.dataprotection.ro/
+
+Applied decisions:
+
+- Keep public legal pages written for clients, not for the site owner or administrator.
+- Remove admin-specific wording from public legal pages.
+- Describe technical providers by category instead of naming platform tools in client-facing text.
+- Include the key GDPR notice elements relevant to the booking form: operator identity, collected data, purposes, legal basis, recipients/provider categories, transfers, retention, rights, complaint authority, mandatory/optional nature of data, and automated decision-making.
+- Keep legal entity fields owner-editable because Sorina still needs to provide the real business details.

@@ -19,7 +19,7 @@ Programarea se face prin formularul de pe site. Formularul cere nume, telefon, s
 
 ## Pagini legale
 
-Site-ul include o Politica de confidentialitate si o pagina de Termeni si conditii, redactate pentru contextul Sorina - Studio de Gene. Acestea explica folosirea datelor trimise prin formularul de programare, confirmarea manuala a cererilor, emailurile operationale, furnizorii tehnici si regulile generale pentru anulare sau reprogramare. Datele juridice ale operatorului sunt preluate din admin si trebuie completate de proprietar.
+Site-ul include o Politica de confidentialitate si o pagina de Termeni si conditii, redactate pentru contextul Sorina - Studio de Gene. Acestea explica folosirea datelor trimise prin formularul de programare, confirmarea manuala a cererilor, emailurile operationale, furnizorii tehnici si regulile generale pentru anulare sau reprogramare. Datele juridice ale operatorului sunt preluate din informatiile completate de proprietar.
 
 ## Intrebari frecvente
 

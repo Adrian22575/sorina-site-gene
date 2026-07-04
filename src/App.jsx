@@ -843,7 +843,7 @@ function SectionIntro({ eyebrow, title, children, centered = false }) {
 }
 
 function legalDisplayValue(value) {
-  return value || 'De completat in admin'
+  return value || 'In curs de completare'
 }
 
 function LegalShell({ children, legal, title, intro }) {
@@ -929,7 +929,7 @@ function LegalPage({ type }) {
         <p>Formularul de pe site trimite o cerere de programare, nu o rezervare automata garantata. Cererea devine programare doar dupa verificarea disponibilitatii si dupa confirmarea transmisa de studio prin email, telefon sau alt canal de contact folosit in mod normal cu clienta.</p>
         <p>Clienta este rugata sa introduca date corecte si complete: nume, telefon, email daca este solicitat, serviciul ales, data si ora preferata. Daca datele sunt incomplete sau incorecte, studioul poate sa nu poata confirma cererea.</p>
         <h2>Disponibilitate si durata serviciilor</h2>
-        <p>Orele afisate in formular sunt calculate in functie de programul setat in admin, programarile existente si durata serviciului ales. Durata afisata este orientativa si poate fi ajustata de Sorina daca situatia concreta a lucrarii cere mai mult sau mai putin timp.</p>
+        <p>Orele afisate in formular sunt calculate in functie de orarul disponibil al studioului, programarile existente si durata serviciului ales. Durata afisata este orientativa si poate fi ajustata de Sorina daca situatia concreta a lucrarii cere mai mult sau mai putin timp.</p>
         <h2>Anulari si reprogramari</h2>
         <p>Daca o clienta nu mai poate ajunge la programare, este rugata sa anunte studioul cat mai repede, folosind datele de contact afisate pe site sau raspunzand la emailul primit pentru programare. Reprogramarea se face in limita locurilor disponibile.</p>
         <p>Studioul isi rezerva dreptul sa reprogrameze o programare atunci cand apar motive obiective, de exemplu intarzieri mari, probleme tehnice, indisponibilitate neprevazuta sau situatii care pot afecta calitatea ori siguranta serviciului. In acest caz, clienta va fi contactata pentru stabilirea unei variante potrivite.</p>
@@ -952,27 +952,31 @@ function LegalPage({ type }) {
       intro="Aceasta politica explica, pe intelesul clientelor, ce date sunt colectate prin site si cum sunt folosite pentru cereri de programare si comunicari legate de acestea."
     >
       <h2>Cine este operatorul</h2>
-      <p>Operatorul datelor este entitatea completata de Sorina in caseta Operator de pe aceasta pagina. Daca unele date ale firmei apar ca "De completat in admin", acestea trebuie completate inainte ca pagina sa fie considerata finala pentru lansare publica.</p>
+      <p>Operatorul datelor este entitatea afisata in caseta Operator de pe aceasta pagina. Acolo gasesti numele legal, datele de identificare si datele de contact pentru solicitari legate de datele personale.</p>
       <h2>Ce date colectam</h2>
-      <p>Prin formularul de programare pot fi colectate: numele si prenumele, numarul de telefon, adresa de email, serviciul ales, data si ora preferata, mesajul transmis, statusul programarii si notele necesare gestionarii cererii. Site-ul poate prelucra si date tehnice minime, cum ar fi informatii necesare functionarii formularului, securitatii si livrarii emailurilor automate.</p>
+      <p>Prin formularul de programare pot fi colectate: numele si prenumele, numarul de telefon, adresa de email, serviciul ales, data si ora preferata, mesajul transmis si informatiile necesare pentru gestionarea programarii. Site-ul poate prelucra si date tehnice minime necesare functionarii formularului, securitatii si livrarii emailurilor automate.</p>
       <h2>Scopurile prelucrarii</h2>
-      <p>Datele sunt folosite pentru preluarea cererii, verificarea disponibilitatii, contactarea clientei, confirmarea sau anularea programarii, reprogramare, trimiterea emailurilor legate de programare si gestionarea istoricului intern necesar activitatii studioului.</p>
+      <p>Datele sunt folosite pentru preluarea cererii, verificarea disponibilitatii, contactarea clientei, confirmarea sau anularea programarii, reprogramare, trimiterea emailurilor legate de programare si pastrarea unei evidente rezonabile a programarilor studioului.</p>
       <h2>Temeiul legal</h2>
       <p>Prelucrarea datelor trimise prin formular este necesara pentru a raspunde cererii clientei si pentru pasii premergatori prestarii serviciului solicitat. Datele tehnice si logurile minime sunt prelucrate pentru interesul legitim de a mentine site-ul functional, sigur si verificabil. Daca pe viitor se vor adauga comunicari de marketing, acestea ar trebui trimise doar pe baza unui acord separat.</p>
       <h2>Emailuri si notificari</h2>
       <p>Site-ul poate trimite emailuri catre Sorina si catre clienta pentru cereri noi, confirmari, detalii despre programare si remindere. Aceste emailuri au scop operational, adica sunt legate direct de programarea solicitata, nu de newsletter sau reclame.</p>
       <h2>Furnizori tehnici</h2>
-      <p>Datele pot fi procesate prin furnizorii tehnici folositi pentru functionarea site-ului, baza de date, gazduire si emailuri automate, precum Vercel, Supabase si Resend. Acesti furnizori sunt folositi doar in masura necesara pentru ca site-ul, formularul si notificarile sa functioneze.</p>
+      <p>Datele pot fi procesate prin furnizorii tehnici folositi pentru gazduirea site-ului, baza de date, securitate si trimiterea emailurilor automate. Acesti furnizori sunt folositi doar in masura necesara pentru ca site-ul, formularul si notificarile sa functioneze. Datele nu sunt vandute catre terti.</p>
+      <h2>Transferuri internationale</h2>
+      <p>Daca furnizorii tehnici folositi pentru site implica prelucrarea datelor in afara Romaniei sau a Spatiului Economic European, transferurile se fac pe baza garantiilor si mecanismelor oferite de acei furnizori conform regulilor aplicabile privind protectia datelor.</p>
       <h2>Cat timp pastram datele</h2>
-      <p>Datele de programare sunt pastrate atat timp cat este necesar pentru gestionarea cererii, confirmarea sau reprogramarea programarii, comunicarea cu clienta si pastrarea unei evidente rezonabile a activitatii. Datele care nu mai sunt necesare ar trebui sterse sau anonimizate periodic din admin, mai ales daca o clienta solicita stergerea lor si nu exista un motiv legal pentru pastrare.</p>
+      <p>Datele de programare sunt pastrate atat timp cat este necesar pentru gestionarea cererii, confirmarea sau reprogramarea programarii, comunicarea cu clienta si pastrarea unei evidente rezonabile a activitatii. Datele care nu mai sunt necesare pot fi sterse sau anonimizate, mai ales daca o clienta solicita stergerea lor si nu exista un motiv legal pentru pastrare.</p>
       <h2>Drepturile tale</h2>
       <p>Conform regulilor GDPR aplicabile, poti cere acces la datele tale, corectarea datelor, stergerea lor, restrictionarea prelucrarii, opozitia la anumite prelucrari si portabilitatea datelor, atunci cand aceste drepturi se aplica. Pentru solicitari, foloseste emailul legal afisat in caseta Operator.</p>
       <h2>Plangere catre autoritate</h2>
       <p>Daca ai o nemultumire legata de prelucrarea datelor, poti contacta operatorul pentru clarificare. De asemenea, ai dreptul sa te adresezi Autoritatii Nationale de Supraveghere a Prelucrarii Datelor cu Caracter Personal.</p>
       <h2>Obligativitatea datelor</h2>
       <p>Transmiterea datelor din formular este voluntara, dar fara datele necesare studioul nu poate prelua, verifica si confirma cererea de programare.</p>
+      <h2>Decizii automate</h2>
+      <p>Site-ul nu foloseste profilare sau decizii automate cu efect juridic asupra clientei. Disponibilitatea orelor este calculata tehnic in functie de programarile existente si durata serviciului ales.</p>
       <h2>Cookie-uri si tracking</h2>
-      <p>In implementarea actuala, site-ul public nu este gandit pentru reclame comportamentale sau tracking de marketing. Zona de admin poate folosi stocare locala strict pentru sesiunea de administrare. Daca vor fi adaugate analytics, reclame sau cookie-uri suplimentare, politica trebuie actualizata inainte de folosirea lor.</p>
+      <p>In implementarea actuala, site-ul public nu este gandit pentru reclame comportamentale sau tracking de marketing. Daca vor fi adaugate analytics, reclame sau cookie-uri suplimentare, politica trebuie actualizata inainte de folosirea lor.</p>
     </LegalShell>
   )
 }
