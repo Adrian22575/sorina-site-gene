@@ -83,11 +83,9 @@ const defaultLegal = {
   legal_address: 'Adresa legala de completat',
   legal_email: 'Email legal de completat',
   legal_phone: 'Telefon de completat',
-  data_retention: 'Datele de programare sunt pastrate doar cat este necesar pentru gestionarea programarii si comunicarea cu clienta.',
-  privacy_intro: 'Aceasta politica explica modul in care sunt folosite datele trimise prin formularul de programare.',
-  terms_intro: 'Acesti termeni descriu modul de folosire a site-ului si procesul de solicitare a unei programari.',
-  cancellation_policy: 'Pentru anulare sau reprogramare, clienta este rugata sa contacteze studioul cat mai repede.',
 }
+
+const legalLastUpdated = '4 iulie 2026'
 
 const defaultFaqs = [
   {
@@ -369,9 +367,10 @@ function latestNotificationForAppointment(appointment) {
 function appointmentNotificationMeta(appointment) {
   const log = latestNotificationForAppointment(appointment)
   if (!log) return { label: 'Fara log email', tone: 'muted', detail: '' }
+  const isCancelledEmail = log.status === 'skipped' && /anulat|stearsa|modificata/i.test(log.error_message || '')
 
   return {
-    label: notificationStatusLabels[log.status] || 'Email verificat',
+    label: isCancelledEmail ? 'Email anulat' : (notificationStatusLabels[log.status] || 'Email verificat'),
     tone: log.status || 'muted',
     detail: log.error_message || '',
   }
@@ -843,6 +842,10 @@ function SectionIntro({ eyebrow, title, children, centered = false }) {
   )
 }
 
+function legalDisplayValue(value) {
+  return value || 'De completat in admin'
+}
+
 function LegalShell({ children, legal, title, intro }) {
   return (
     <main className="legal-page">
@@ -859,15 +862,16 @@ function LegalShell({ children, legal, title, intro }) {
         <p className="eyebrow">Legal</p>
         <h1>{title}</h1>
         <p>{intro}</p>
+        <span className="legal-updated">Ultima actualizare: {legalLastUpdated}</span>
       </section>
       <section className="legal-content">
         <aside className="legal-card">
           <strong>Operator</strong>
-          <span>{legal.owner_name}</span>
-          <span>{legal.company_id}</span>
-          <span>{legal.legal_address}</span>
-          <span>{legal.legal_email}</span>
-          <span>{legal.legal_phone}</span>
+          <span>{legalDisplayValue(legal.owner_name)}</span>
+          <span>{legalDisplayValue(legal.company_id)}</span>
+          <span>{legalDisplayValue(legal.legal_address)}</span>
+          <span>{legalDisplayValue(legal.legal_email)}</span>
+          <span>{legalDisplayValue(legal.legal_phone)}</span>
         </aside>
         <div className="legal-copy">
           {children}
@@ -917,18 +921,26 @@ function LegalPage({ type }) {
       <LegalShell
         legal={legal}
         title="Termeni si conditii"
-        intro={legal.terms_intro}
+        intro="Acesti termeni explica felul in care poate fi folosit site-ul Sorina - Studio de Gene si cum functioneaza cererile de programare trimise online."
       >
-        <h2>Folosirea site-ului</h2>
-        <p>Site-ul prezinta serviciile Sorina - Studio de Gene si permite trimiterea unei cereri de programare. Informatiile de pe site pot fi actualizate periodic.</p>
-        <h2>Programari</h2>
-        <p>Trimiterea formularului nu garanteaza automat programarea. Cererea este verificata, iar programarea devine finala dupa confirmarea transmisa de studio.</p>
+        <h2>Despre site</h2>
+        <p>Site-ul prezinta serviciile Sorina - Studio de Gene, informatii despre extensii de gene, laminare, rezultate, intrebari frecvente si o modalitate de a trimite o cerere de programare. Continutul este informativ si poate fi actualizat atunci cand serviciile, programul sau detaliile studioului se schimba.</p>
+        <h2>Cereri de programare</h2>
+        <p>Formularul de pe site trimite o cerere de programare, nu o rezervare automata garantata. Cererea devine programare doar dupa verificarea disponibilitatii si dupa confirmarea transmisa de studio prin email, telefon sau alt canal de contact folosit in mod normal cu clienta.</p>
+        <p>Clienta este rugata sa introduca date corecte si complete: nume, telefon, email daca este solicitat, serviciul ales, data si ora preferata. Daca datele sunt incomplete sau incorecte, studioul poate sa nu poata confirma cererea.</p>
+        <h2>Disponibilitate si durata serviciilor</h2>
+        <p>Orele afisate in formular sunt calculate in functie de programul setat in admin, programarile existente si durata serviciului ales. Durata afisata este orientativa si poate fi ajustata de Sorina daca situatia concreta a lucrarii cere mai mult sau mai putin timp.</p>
         <h2>Anulari si reprogramari</h2>
-        <p>{legal.cancellation_policy}</p>
+        <p>Daca o clienta nu mai poate ajunge la programare, este rugata sa anunte studioul cat mai repede, folosind datele de contact afisate pe site sau raspunzand la emailul primit pentru programare. Reprogramarea se face in limita locurilor disponibile.</p>
+        <p>Studioul isi rezerva dreptul sa reprogrameze o programare atunci cand apar motive obiective, de exemplu intarzieri mari, probleme tehnice, indisponibilitate neprevazuta sau situatii care pot afecta calitatea ori siguranta serviciului. In acest caz, clienta va fi contactata pentru stabilirea unei variante potrivite.</p>
         <h2>Servicii si preturi</h2>
-        <p>Serviciile, duratele si preturile afisate pot fi actualizate. Daca exista neclaritati, detaliile finale se confirma inainte de programare.</p>
-        <h2>Contact</h2>
-        <p>Pentru intrebari despre programari, modificari sau informatii afisate pe site, foloseste datele de contact din aceasta pagina sau din sectiunea Contact.</p>
+        <p>Serviciile, descrierile, duratele si preturile afisate pe site pot fi actualizate. Daca exista diferente intre informatia vazuta anterior si informatia comunicata direct de studio la momentul confirmarii, detaliile confirmate direct de studio sunt cele relevante pentru programarea respectiva.</p>
+        <h2>Comportament si siguranta</h2>
+        <p>Studioul poate refuza sau opri o programare daca exista comportament agresiv, solicitari nepotrivite, risc pentru igiena ori siguranta, sau daca serviciul cerut nu poate fi realizat in conditii bune pentru clienta.</p>
+        <h2>Limitarea raspunderii</h2>
+        <p>Site-ul este mentinut cu atentie, dar pot aparea temporar erori tehnice, intarzieri in actualizarea informatiilor sau indisponibilitati. Pentru detalii importante despre o programare, clienta ar trebui sa urmareasca mesajele directe primite de la studio.</p>
+        <h2>Legea aplicabila si contact</h2>
+        <p>Acesti termeni sunt ganditi pentru folosirea site-ului si a serviciilor oferite in Romania. Pentru intrebari despre programari, anulare, reprogramare sau informatii afisate pe site, clienta poate folosi datele de contact ale operatorului afisate pe aceasta pagina sau datele din sectiunea Contact.</p>
       </LegalShell>
     )
   }
@@ -937,20 +949,30 @@ function LegalPage({ type }) {
     <LegalShell
       legal={legal}
       title="Politica de confidentialitate"
-      intro={legal.privacy_intro}
+      intro="Aceasta politica explica, pe intelesul clientelor, ce date sunt colectate prin site si cum sunt folosite pentru cereri de programare si comunicari legate de acestea."
     >
+      <h2>Cine este operatorul</h2>
+      <p>Operatorul datelor este entitatea completata de Sorina in caseta Operator de pe aceasta pagina. Daca unele date ale firmei apar ca "De completat in admin", acestea trebuie completate inainte ca pagina sa fie considerata finala pentru lansare publica.</p>
       <h2>Ce date colectam</h2>
-      <p>Prin formularul de programare pot fi colectate numele, numarul de telefon, adresa de email, serviciul ales, data si ora preferata, mesajul transmis si date tehnice minime necesare functionarii formularului.</p>
-      <h2>De ce folosim datele</h2>
-      <p>Datele sunt folosite pentru preluarea cererii, contactarea clientei, confirmarea programarii, reprogramare, anulare si comunicari strict legate de serviciul solicitat.</p>
-      <h2>Cine poate primi datele</h2>
-      <p>Datele pot fi procesate prin furnizorii tehnici folositi pentru functionarea site-ului, baza de date si emailuri automate, precum Vercel, Supabase si Resend, in masura necesara pentru aceste servicii.</p>
+      <p>Prin formularul de programare pot fi colectate: numele si prenumele, numarul de telefon, adresa de email, serviciul ales, data si ora preferata, mesajul transmis, statusul programarii si notele necesare gestionarii cererii. Site-ul poate prelucra si date tehnice minime, cum ar fi informatii necesare functionarii formularului, securitatii si livrarii emailurilor automate.</p>
+      <h2>Scopurile prelucrarii</h2>
+      <p>Datele sunt folosite pentru preluarea cererii, verificarea disponibilitatii, contactarea clientei, confirmarea sau anularea programarii, reprogramare, trimiterea emailurilor legate de programare si gestionarea istoricului intern necesar activitatii studioului.</p>
+      <h2>Temeiul legal</h2>
+      <p>Prelucrarea datelor trimise prin formular este necesara pentru a raspunde cererii clientei si pentru pasii premergatori prestarii serviciului solicitat. Datele tehnice si logurile minime sunt prelucrate pentru interesul legitim de a mentine site-ul functional, sigur si verificabil. Daca pe viitor se vor adauga comunicari de marketing, acestea ar trebui trimise doar pe baza unui acord separat.</p>
+      <h2>Emailuri si notificari</h2>
+      <p>Site-ul poate trimite emailuri catre Sorina si catre clienta pentru cereri noi, confirmari, detalii despre programare si remindere. Aceste emailuri au scop operational, adica sunt legate direct de programarea solicitata, nu de newsletter sau reclame.</p>
+      <h2>Furnizori tehnici</h2>
+      <p>Datele pot fi procesate prin furnizorii tehnici folositi pentru functionarea site-ului, baza de date, gazduire si emailuri automate, precum Vercel, Supabase si Resend. Acesti furnizori sunt folositi doar in masura necesara pentru ca site-ul, formularul si notificarile sa functioneze.</p>
       <h2>Cat timp pastram datele</h2>
-      <p>{legal.data_retention}</p>
+      <p>Datele de programare sunt pastrate atat timp cat este necesar pentru gestionarea cererii, confirmarea sau reprogramarea programarii, comunicarea cu clienta si pastrarea unei evidente rezonabile a activitatii. Datele care nu mai sunt necesare ar trebui sterse sau anonimizate periodic din admin, mai ales daca o clienta solicita stergerea lor si nu exista un motiv legal pentru pastrare.</p>
       <h2>Drepturile tale</h2>
-      <p>Poti cere acces la datele tale, corectarea lor, stergerea lor, restrictionarea prelucrarii sau te poti opune anumitor prelucrari, in limitele legii aplicabile. Pentru solicitari, foloseste emailul legal afisat pe aceasta pagina.</p>
-      <h2>Formularul de programare</h2>
-      <p>Daca nu furnizezi datele cerute in formular, studioul nu poate prelua si confirma cererea de programare.</p>
+      <p>Conform regulilor GDPR aplicabile, poti cere acces la datele tale, corectarea datelor, stergerea lor, restrictionarea prelucrarii, opozitia la anumite prelucrari si portabilitatea datelor, atunci cand aceste drepturi se aplica. Pentru solicitari, foloseste emailul legal afisat in caseta Operator.</p>
+      <h2>Plangere catre autoritate</h2>
+      <p>Daca ai o nemultumire legata de prelucrarea datelor, poti contacta operatorul pentru clarificare. De asemenea, ai dreptul sa te adresezi Autoritatii Nationale de Supraveghere a Prelucrarii Datelor cu Caracter Personal.</p>
+      <h2>Obligativitatea datelor</h2>
+      <p>Transmiterea datelor din formular este voluntara, dar fara datele necesare studioul nu poate prelua, verifica si confirma cererea de programare.</p>
+      <h2>Cookie-uri si tracking</h2>
+      <p>In implementarea actuala, site-ul public nu este gandit pentru reclame comportamentale sau tracking de marketing. Zona de admin poate folosi stocare locala strict pentru sesiunea de administrare. Daca vor fi adaugate analytics, reclame sau cookie-uri suplimentare, politica trebuie actualizata inainte de folosirea lor.</p>
     </LegalShell>
   )
 }
@@ -2662,15 +2684,15 @@ function AdminApp({ appointmentsOnly = false }) {
         <div className="admin-panel-header">
           <div>
             <h2>Legal</h2>
-            <p>Datele acestea apar in Politica de confidentialitate si Termeni si conditii.</p>
+            <p>Completeaza doar datele firmei/operatorului. Textele pentru politica si termeni sunt pregatite automat in site.</p>
           </div>
           <button type="button" onClick={saveLegal} disabled={isBusy}>
-            <Save size={16} /> {isBusy ? 'Se salveaza...' : 'Salveaza legal'}
+            <Save size={16} /> {isBusy ? 'Se salveaza...' : 'Salveaza date firma'}
           </button>
         </div>
         <div className="admin-legal-note">
-          <strong>Nota importanta</strong>
-          <span>Textele sunt un punct de pornire practic, nu consultanta juridica. Sorina ar trebui sa le verifice inainte de lansarea publica.</span>
+          <strong>Ce ramane de completat</strong>
+          <span>Numele legal, CUI-ul, adresa, emailul si telefonul se afiseaza automat in Politica de confidentialitate si Termeni si conditii. Restul textelor sunt redactate in site pentru contextul Sorina.</span>
         </div>
         <div className="admin-service-grid">
           <label>
@@ -2692,22 +2714,6 @@ function AdminApp({ appointmentsOnly = false }) {
           <label className="full">
             Adresa legala / punct lucru
             <input value={content.legal.legal_address} onChange={(event) => updateLegal('legal_address', event.target.value)} />
-          </label>
-          <label className="full">
-            Introducere politica de confidentialitate
-            <textarea rows="3" value={content.legal.privacy_intro} onChange={(event) => updateLegal('privacy_intro', event.target.value)} />
-          </label>
-          <label className="full">
-            Perioada pastrare date programari
-            <textarea rows="3" value={content.legal.data_retention} onChange={(event) => updateLegal('data_retention', event.target.value)} />
-          </label>
-          <label className="full">
-            Introducere termeni si conditii
-            <textarea rows="3" value={content.legal.terms_intro} onChange={(event) => updateLegal('terms_intro', event.target.value)} />
-          </label>
-          <label className="full">
-            Politica anulare / reprogramare
-            <textarea rows="3" value={content.legal.cancellation_policy} onChange={(event) => updateLegal('cancellation_policy', event.target.value)} />
           </label>
         </div>
       </section>

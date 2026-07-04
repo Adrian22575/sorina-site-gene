@@ -407,10 +407,11 @@ async function markNotification(config, id, payload) {
   return result.ok
 }
 
-async function reminderRows(config, appointmentId) {
+async function futureReminderRows(config, appointmentId) {
+  const now = encodeURIComponent(new Date().toISOString())
   const result = await supabaseBookingFetch(
     config,
-    `appointment_notifications?appointment_id=eq.${encodeURIComponent(appointmentId)}&notification_type=in.(one_hour_before,client_one_day_before,client_one_hour_before)&select=id,resend_email_id,status`,
+    `appointment_notifications?appointment_id=eq.${encodeURIComponent(appointmentId)}&status=eq.pending&scheduled_for=gte.${now}&select=id,resend_email_id,status,notification_type,scheduled_for,error_message`,
   )
 
   if (!result.ok) return []
@@ -418,15 +419,35 @@ async function reminderRows(config, appointmentId) {
 }
 
 async function cancelResendEmail(emailId) {
-  if (!emailId) return
-  await resendRequest(`emails/${encodeURIComponent(emailId)}/cancel`, { method: 'POST' })
+  if (!emailId) return { ok: true, skipped: true }
+  const result = await resendRequest(`emails/${encodeURIComponent(emailId)}/cancel`, { method: 'POST' })
+  if (result.skipped || result.error) {
+    return {
+      ok: false,
+      error: result.reason || result.error || 'Emailul programat nu a putut fi anulat in Resend.',
+    }
+  }
+
+  return { ok: true, id: result.data?.id || emailId }
 }
 
-async function cancelExistingAppointmentReminder(config, appointmentId) {
-  const rows = await reminderRows(config, appointmentId)
+export async function cancelAppointmentScheduledEmails(config, appointmentId, reason = 'Email programat anulat pentru ca programarea a fost modificata, anulata sau stearsa.') {
+  const rows = await futureReminderRows(config, appointmentId)
   await Promise.all(rows.map(async (row) => {
-    if (row.resend_email_id && row.status === 'pending') await cancelResendEmail(row.resend_email_id)
-    await markNotification(config, row.id, { status: 'skipped', error_message: 'Reminder inlocuit sau anulat.' })
+    const cancelResult = await cancelResendEmail(row.resend_email_id)
+    if (!cancelResult.ok) {
+      await markNotification(config, row.id, {
+        error_message: `Anulare Resend esuata: ${cancelResult.error}`,
+      })
+      const error = new Error(`Emailul programat nu a putut fi anulat in Resend: ${cancelResult.error}`)
+      error.status = 502
+      throw error
+    }
+
+    await markNotification(config, row.id, {
+      status: 'skipped',
+      error_message: reason,
+    })
   }))
 }
 
@@ -645,7 +666,7 @@ export async function sendClientConfirmedEmail(config, appointment) {
 
 export async function replaceAppointmentReminder(config, appointment) {
   if (!appointment?.id) return
-  await cancelExistingAppointmentReminder(config, appointment.id)
+  await cancelAppointmentScheduledEmails(config, appointment.id)
 
   const settings = await readNotificationSettings(config)
   if (!activeStatuses.has(appointment.status || 'new')) return
@@ -770,7 +791,7 @@ export async function ensureUpcomingAppointmentReminders(config) {
   let scheduled = 0
 
   await Promise.allSettled(appointments.map(async (appointment) => {
-    const rows = await reminderRows(config, appointment.id)
+    const rows = await futureReminderRows(config, appointment.id)
     if (rows.some((row) => row.status === 'pending')) return
 
     await replaceAppointmentReminder(config, appointment)

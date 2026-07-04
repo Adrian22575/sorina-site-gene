@@ -1028,6 +1028,14 @@ form button:disabled {
   max-width: 760px;
 }
 
+.legal-updated {
+  color: var(--muted);
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 18px;
+}
+
 .legal-content {
   display: grid;
   gap: 28px;

@@ -17,6 +17,7 @@ import {
 } from '../_booking.js'
 import {
   isValidEmail,
+  cancelAppointmentScheduledEmails,
   normalizeNotificationSettings,
   readEmailUsage,
   readNotificationSettings,
@@ -197,6 +198,7 @@ async function updateAppointment(config, id, body) {
   if (validationError) return { status: 400, error: validationError }
 
   await ensureAvailableSlot(config, payload, id)
+  await cancelAppointmentScheduledEmails(config, id)
 
   const result = await supabaseBookingFetch(config, `appointments?id=eq.${encodeURIComponent(id)}`, {
     method: 'PATCH',
@@ -218,7 +220,7 @@ async function deleteAppointment(config, id) {
   const current = await readAppointment(config, id)
   if (!current) return { status: 404, error: 'Programarea nu exista.' }
 
-  await replaceAppointmentReminder(config, { ...current, status: 'cancelled' })
+  await cancelAppointmentScheduledEmails(config, id, 'Email programat anulat pentru ca programarea a fost stearsa.')
 
   const result = await supabaseBookingFetch(config, `appointments?id=eq.${encodeURIComponent(id)}`, {
     method: 'DELETE',

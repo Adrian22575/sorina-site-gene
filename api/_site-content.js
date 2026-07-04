@@ -15,10 +15,6 @@ export const fallbackContent = {
       legal_address: 'Adresa legala de completat',
       legal_email: 'Email legal de completat',
       legal_phone: 'Telefon de completat',
-      data_retention: 'Datele de programare sunt pastrate doar cat este necesar pentru gestionarea programarii si comunicarea cu clienta.',
-      privacy_intro: 'Aceasta politica explica modul in care sunt folosite datele trimise prin formularul de programare.',
-      terms_intro: 'Acesti termeni descriu modul de folosire a site-ului si procesul de solicitare a unei programari.',
-      cancellation_policy: 'Pentru anulare sau reprogramare, clienta este rugata sa contacteze studioul cat mai repede.',
     },
   },
   gallery: [
@@ -303,10 +299,6 @@ export function legalPayload(body) {
     legal_address: cleanString(body.legal_address, 240),
     legal_email: cleanString(body.legal_email, 180),
     legal_phone: cleanString(body.legal_phone, 80),
-    data_retention: cleanString(body.data_retention, 900),
-    privacy_intro: cleanString(body.privacy_intro, 900),
-    terms_intro: cleanString(body.terms_intro, 900),
-    cancellation_policy: cleanString(body.cancellation_policy, 900),
   }
 }
 

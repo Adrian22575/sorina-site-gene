@@ -10,8 +10,8 @@ Sorina - Studio de Gene este pozitionat ca experienta premium, calma si atenta p
 - [Servicii](https://sorina-site-gene.vercel.app/#services): efect natural, volum delicat, efect intens, laminare gene / sprancene.
 - [Intrebari frecvente](https://sorina-site-gene.vercel.app/#faq): rezistenta extensiilor, confortul aplicarii, protectia genelor naturale, pregatirea inainte de programare si ritmul de intretinere.
 - [Programare](https://sorina-site-gene.vercel.app/#booking): formular de cerere pentru programare, cu confirmare manuala.
-- [Politica de confidentialitate](https://sorina-site-gene.vercel.app/politica-de-confidentialitate): explica datele colectate prin formularul de programare si modul de folosire.
-- [Termeni si conditii](https://sorina-site-gene.vercel.app/termeni-si-conditii): descrie folosirea site-ului, cererea de programare, confirmarea manuala si anularea/reprogramarea.
+- [Politica de confidentialitate](https://sorina-site-gene.vercel.app/politica-de-confidentialitate): explica datele colectate prin formular, emailurile operationale, furnizorii tehnici, pastrarea datelor si drepturile clientei.
+- [Termeni si conditii](https://sorina-site-gene.vercel.app/termeni-si-conditii): descrie folosirea site-ului, cererea de programare, confirmarea manuala, durata serviciilor si anularea/reprogramarea.
 - [Rezumat text](https://sorina-site-gene.vercel.app/site-summary.md): versiune scurta, usor de citit de agenti si modele lingvistice.
 
 ## Cuvinte si intentii relevante
