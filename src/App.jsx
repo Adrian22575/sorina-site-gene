@@ -150,6 +150,25 @@ const defaultNotificationSettings = {
   notify_client_hour_before: true,
 }
 
+const defaultEmailUsageBucket = {
+  sent: 0,
+  pending: 0,
+  failed: 0,
+  skipped: 0,
+  total: 0,
+}
+
+const defaultEmailUsage = {
+  limits: {
+    daily: 100,
+    monthly: 3000,
+  },
+  day: defaultEmailUsageBucket,
+  month: defaultEmailUsageBucket,
+  generated_at: '',
+  source: 'site_logs',
+}
+
 const defaultBookingSettings = {
   start_time: '10:00',
   end_time: '18:00',
@@ -260,6 +279,24 @@ function formatRomanianDate(value) {
 function formatRomanianMonth(monthKey) {
   const [year, month] = monthKey.split('-').map(Number)
   return monthLabelFormatter.format(new Date(year, month - 1, 1))
+}
+
+function usagePercent(value, limit) {
+  if (!limit) return 0
+  return Math.min(100, Math.round((Number(value) / Number(limit)) * 100))
+}
+
+function formatEmailUsageTimestamp(value) {
+  if (!value) return 'Actualizat la intrarea in admin'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Actualizat recent'
+
+  return `Actualizat ${new Intl.DateTimeFormat('ro-RO', {
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    month: '2-digit',
+  }).format(date)}`
 }
 
 function compareAppointments(first, second) {
@@ -394,6 +431,29 @@ function normalizeNotificationSettings(settings = {}) {
     notify_before: settings.notify_before !== false,
     notify_client_day_before: settings.notify_client_day_before !== false,
     notify_client_hour_before: settings.notify_client_hour_before !== false,
+  }
+}
+
+function normalizeEmailUsageBucket(bucket = {}) {
+  return {
+    sent: Number(bucket.sent) || 0,
+    pending: Number(bucket.pending) || 0,
+    failed: Number(bucket.failed) || 0,
+    skipped: Number(bucket.skipped) || 0,
+    total: Number(bucket.total) || 0,
+  }
+}
+
+function normalizeEmailUsage(usage = {}) {
+  return {
+    limits: {
+      daily: Number(usage.limits?.daily) || defaultEmailUsage.limits.daily,
+      monthly: Number(usage.limits?.monthly) || defaultEmailUsage.limits.monthly,
+    },
+    day: normalizeEmailUsageBucket(usage.day),
+    month: normalizeEmailUsageBucket(usage.month),
+    generated_at: usage.generated_at || '',
+    source: usage.source || 'site_logs',
   }
 }
 
@@ -918,8 +978,8 @@ function AdminOrderControls({ index, total, onMoveUp, onMoveDown, disabled = fal
 }
 
 function AdminApp({ appointmentsOnly = false }) {
-  const [password, setPassword] = useState(() => window.sessionStorage.getItem('sorina_admin_password') || '')
-  const [draftPassword, setDraftPassword] = useState('')
+  const [password, setPassword] = useState('')
+  const [draftPassword, setDraftPassword] = useState(() => window.sessionStorage.getItem('sorina_admin_password') || '')
   const [services, setServices] = useState([])
   const [appointments, setAppointments] = useState([])
   const [appointmentView, setAppointmentView] = useState('calendar')
@@ -929,6 +989,7 @@ function AdminApp({ appointmentsOnly = false }) {
   const [calendarMonth, setCalendarMonth] = useState(() => monthKeyFromDate())
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(() => bucharestDateString())
   const [notificationSettings, setNotificationSettings] = useState(defaultNotificationSettings)
+  const [emailUsage, setEmailUsage] = useState(defaultEmailUsage)
   const [bookingSettings, setBookingSettings] = useState(defaultBookingSettings)
   const [adminSlots, setAdminSlots] = useState([])
   const [content, setContent] = useState(() => normalizeContent({}))
@@ -937,13 +998,27 @@ function AdminApp({ appointmentsOnly = false }) {
   const isLoggedIn = Boolean(password)
   const isBusy = status.state === 'loading'
 
-  async function adminRequest(path, options = {}) {
+  function resetAdminSession(nextStatus = { state: 'idle', message: '' }) {
+    window.sessionStorage.removeItem('sorina_admin_password')
+    setPassword('')
+    setServices([])
+    setAppointments([])
+    setAppointmentDraft(null)
+    setNotificationSettings(defaultNotificationSettings)
+    setEmailUsage(defaultEmailUsage)
+    setBookingSettings(defaultBookingSettings)
+    setAdminSlots([])
+    setContent(normalizeContent({}))
+    setStatus(nextStatus)
+  }
+
+  async function adminRequestWithPassword(path, requestPassword, options = {}) {
     const response = await fetch(adminApiPath(path), {
       ...options,
       credentials: 'same-origin',
       headers: {
         'Content-Type': 'application/json',
-        'x-admin-password': password,
+        'x-admin-password': requestPassword,
         ...options.headers,
       },
     })
@@ -955,6 +1030,10 @@ function AdminApp({ appointmentsOnly = false }) {
     }
 
     return data
+  }
+
+  async function adminRequest(path, options = {}) {
+    return adminRequestWithPassword(path, password, options)
   }
 
   async function loadAdminData() {
@@ -971,11 +1050,12 @@ function AdminApp({ appointmentsOnly = false }) {
       setContent(normalizeContent(contentData))
       setAppointments((appointmentData.appointments || []).map(normalizeAppointment))
       setNotificationSettings(normalizeNotificationSettings(appointmentData.notifications))
+      setEmailUsage(normalizeEmailUsage(appointmentData.email_usage))
       setBookingSettings(normalizeBookingSettings(appointmentData.booking_settings))
       setAdminSlots(appointmentData.slots || [])
       setStatus({ state: 'success', message: 'Continutul este actualizat.' })
     } catch (error) {
-      setStatus({ state: 'error', message: error.message })
+      resetAdminSession({ state: 'error', message: error.message })
     }
   }
 
@@ -1029,12 +1109,13 @@ function AdminApp({ appointmentsOnly = false }) {
           setContent(normalizeContent(contentData))
           setAppointments((appointmentData.appointments || []).map(normalizeAppointment))
           setNotificationSettings(normalizeNotificationSettings(appointmentData.notifications))
+          setEmailUsage(normalizeEmailUsage(appointmentData.email_usage))
           setBookingSettings(normalizeBookingSettings(appointmentData.booking_settings))
           setAdminSlots(appointmentData.slots || [])
           setStatus({ state: 'success', message: 'Continutul este actualizat.' })
         }
       } catch (error) {
-        if (isMounted) setStatus({ state: 'error', message: error.message })
+        if (isMounted) resetAdminSession({ state: 'error', message: error.message })
       }
     }
 
@@ -1101,25 +1182,28 @@ function AdminApp({ appointmentsOnly = false }) {
     window.history.replaceState(null, '', `#${sectionId}`)
   }
 
-  function login(event) {
+  async function login(event) {
     event.preventDefault()
     const nextPassword = draftPassword.trim()
-    window.sessionStorage.setItem('sorina_admin_password', nextPassword)
-    setPassword(nextPassword)
-    setDraftPassword('')
+    if (!nextPassword) return
+
+    setStatus({ state: 'loading', message: 'Se verifica parola...' })
+
+    try {
+      await adminRequestWithPassword('/api/admin/appointments', nextPassword)
+      window.sessionStorage.setItem('sorina_admin_password', nextPassword)
+      setPassword(nextPassword)
+      setDraftPassword('')
+      setStatus({ state: 'loading', message: 'Parola este valida. Se incarca adminul...' })
+    } catch (error) {
+      window.sessionStorage.removeItem('sorina_admin_password')
+      setPassword('')
+      setStatus({ state: 'error', message: error.message })
+    }
   }
 
   function logout() {
-    window.sessionStorage.removeItem('sorina_admin_password')
-    setPassword('')
-    setServices([])
-    setAppointments([])
-    setAppointmentDraft(null)
-    setNotificationSettings(defaultNotificationSettings)
-    setBookingSettings(defaultBookingSettings)
-    setAdminSlots([])
-    setContent(normalizeContent({}))
-    setStatus({ state: 'idle', message: '' })
+    resetAdminSession()
   }
 
   function updateService(index, field, value) {
@@ -1336,6 +1420,7 @@ function AdminApp({ appointmentsOnly = false }) {
         body: JSON.stringify({ notifications: notificationSettings }),
       })
       setNotificationSettings(normalizeNotificationSettings(data.notifications))
+      if (data.email_usage) setEmailUsage(normalizeEmailUsage(data.email_usage))
       setStatus({ state: 'success', message: successMessage })
     } catch (error) {
       setStatus({ state: 'error', message: error.message })
@@ -1375,6 +1460,7 @@ function AdminApp({ appointmentsOnly = false }) {
         body: JSON.stringify({ test_email: true, notifications: notificationSettings }),
       })
       if (data.notifications) setNotificationSettings(normalizeNotificationSettings(data.notifications))
+      if (data.email_usage) setEmailUsage(normalizeEmailUsage(data.email_usage))
       const usage = data.test?.usage || {}
       const usageText = [
         usage.daily_quota ? `zi: ${usage.daily_quota}` : '',
@@ -2153,6 +2239,9 @@ function AdminApp({ appointmentsOnly = false }) {
   const weekdayLabels = calendarDays.slice(0, 7).map(({ date }) => weekdayFormatter.format(date))
   const selectedFilterLabel = appointmentFilterOptions.find((option) => option.value === appointmentFilter)?.label || 'Programari'
   const appointmentDraftMail = appointmentDraft ? appointmentNotificationMeta(appointmentDraft) : null
+  const dailyEmailPercent = usagePercent(emailUsage.day.sent, emailUsage.limits.daily)
+  const monthlyEmailPercent = usagePercent(emailUsage.month.sent, emailUsage.limits.monthly)
+  const emailUsageUpdatedLabel = formatEmailUsageTimestamp(emailUsage.generated_at)
 
   if (!isLoggedIn) {
     return (
@@ -2172,13 +2261,17 @@ function AdminApp({ appointmentsOnly = false }) {
                 type="password"
                 value={draftPassword}
                 onChange={(event) => setDraftPassword(event.target.value)}
+                disabled={isBusy}
                 required
               />
             </label>
-            <button type="submit">
-              Intra in admin <ArrowRight size={16} />
+            <button type="submit" disabled={isBusy || !draftPassword.trim()}>
+              {isBusy ? 'Se verifica...' : 'Intra in admin'} <ArrowRight size={16} />
             </button>
           </form>
+          {status.message ? (
+            <p className={`admin-login-status admin-login-status-${status.state}`}>{status.message}</p>
+          ) : null}
         </section>
       </main>
     )
@@ -2760,9 +2853,46 @@ function AdminApp({ appointmentsOnly = false }) {
               />
               <span>Clienta: reminder cu o ora inainte</span>
             </label>
-            <div className="admin-email-limit-note full">
-              <strong>Limita Resend Free</strong>
-              <span>3.000 emailuri/luna si 100 emailuri/zi. Daca se depaseste limita, notificarile pot sa nu mai fie trimise pana la resetarea limitei sau pana la upgrade/plan platit.</span>
+            <div className="admin-email-usage full">
+              <div className="admin-email-usage-header">
+                <div>
+                  <strong>Consum emailuri Resend</strong>
+                  <span>{emailUsageUpdatedLabel}</span>
+                </div>
+                <span>Free: {emailUsage.limits.monthly.toLocaleString('ro-RO')} / luna</span>
+              </div>
+              <div className="admin-email-usage-grid">
+                <div className="admin-email-usage-item">
+                  <div>
+                    <span>Azi</span>
+                    <strong>{emailUsage.day.sent} / {emailUsage.limits.daily}</strong>
+                  </div>
+                  <div className="admin-email-usage-meter" aria-hidden="true">
+                    <span style={{ width: `${dailyEmailPercent}%` }} />
+                  </div>
+                  <small>
+                    {emailUsage.day.pending ? `${emailUsage.day.pending} programate. ` : ''}
+                    {emailUsage.day.failed ? `${emailUsage.day.failed} esuate. ` : ''}
+                    {!emailUsage.day.pending && !emailUsage.day.failed ? 'Fara emailuri esuate azi.' : ''}
+                  </small>
+                </div>
+                <div className="admin-email-usage-item">
+                  <div>
+                    <span>Luna aceasta</span>
+                    <strong>{emailUsage.month.sent} / {emailUsage.limits.monthly.toLocaleString('ro-RO')}</strong>
+                  </div>
+                  <div className="admin-email-usage-meter" aria-hidden="true">
+                    <span style={{ width: `${monthlyEmailPercent}%` }} />
+                  </div>
+                  <small>
+                    {emailUsage.month.pending ? `${emailUsage.month.pending} programate. ` : ''}
+                    {emailUsage.month.failed ? `${emailUsage.month.failed} esuate. ` : ''}
+                    {emailUsage.month.skipped ? `${emailUsage.month.skipped} sarite. ` : ''}
+                    Daca se depaseste limita, notificarile pot fi oprite pana la resetare sau upgrade.
+                  </small>
+                </div>
+              </div>
+              <p>Calculat din emailurile logate de site. Daca se trimit emailuri si direct din Resend, dashboardul Resend ramane sursa finala.</p>
             </div>
           </div>
           <div className="admin-row-actions">

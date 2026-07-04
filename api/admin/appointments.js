@@ -18,6 +18,7 @@ import {
 import {
   isValidEmail,
   normalizeNotificationSettings,
+  readEmailUsage,
   readNotificationSettings,
   replaceAppointmentReminder,
   saveNotificationSettings,
@@ -342,6 +343,7 @@ export default async function handler(request, response) {
         notifications: await readNotificationSettings(config),
         booking_settings: bookingSettings,
         slots: bookingSlots(bookingSettings),
+        email_usage: await readEmailUsage(config),
       })
     }
 
@@ -355,7 +357,12 @@ export default async function handler(request, response) {
 
       const savedSettings = await saveNotificationSettings(config, testSettings)
       const testResult = await sendTestNotificationEmail(config, testSettings)
-      return sendJson(response, 200, { ok: true, notifications: savedSettings, test: testResult })
+      return sendJson(response, 200, {
+        ok: true,
+        notifications: savedSettings,
+        test: testResult,
+        email_usage: await readEmailUsage(config),
+      })
     }
 
     if (body.booking_settings) {
@@ -376,7 +383,10 @@ export default async function handler(request, response) {
       const savedSettings = await saveNotificationSettings(config, notifications)
       const activeAppointments = (await listAppointments(config)).filter((appointment) => activeStatuses.has(appointment.status))
       await Promise.allSettled(activeAppointments.map((appointment) => replaceAppointmentReminder(config, appointment)))
-      return sendJson(response, 200, { notifications: savedSettings })
+      return sendJson(response, 200, {
+        notifications: savedSettings,
+        email_usage: await readEmailUsage(config),
+      })
     }
 
     if (request.method === 'POST') {

@@ -1023,6 +1023,27 @@ form button:disabled {
   max-width: 520px;
 }
 
+.admin-login-status {
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.45;
+  margin: 0;
+  max-width: 520px;
+  padding: 12px 14px;
+}
+
+.admin-login-status-error {
+  background: #fff1f1;
+  border: 1px solid rgba(111, 19, 38, 0.22);
+  color: var(--wine);
+}
+
+.admin-login-status-loading {
+  background: white;
+  border: 1px solid var(--line);
+  color: var(--soft-ink);
+}
+
 .admin-header {
   align-items: end;
   display: flex;
@@ -1884,6 +1905,91 @@ form button:disabled {
   font-size: 13px;
 }
 
+.admin-email-usage {
+  background: white;
+  border: 1px solid rgba(111, 19, 38, 0.24);
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+}
+
+.admin-email-usage-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.admin-email-usage-header div {
+  display: grid;
+  gap: 4px;
+}
+
+.admin-email-usage-header strong {
+  color: var(--wine);
+  font-size: 13px;
+}
+
+.admin-email-usage-header span,
+.admin-email-usage p,
+.admin-email-usage-item small {
+  color: var(--soft-ink);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.admin-email-usage-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-email-usage-item {
+  background: #fbf8f4;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.admin-email-usage-item > div:first-child {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.admin-email-usage-item span {
+  color: var(--soft-ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.admin-email-usage-item strong {
+  color: var(--wine);
+  font-size: 17px;
+}
+
+.admin-email-usage-meter {
+  background: #eaded7;
+  border-radius: 999px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.admin-email-usage-meter span {
+  background: linear-gradient(90deg, var(--wine), var(--gold));
+  display: block;
+  height: 100%;
+}
+
+.admin-email-usage p {
+  margin: 0;
+}
+
 .admin-notification-email-card {
   align-items: end;
   display: grid;
@@ -2207,6 +2313,7 @@ form button:disabled {
   .admin-cropper,
   .admin-calendar-layout,
   .admin-day-timeline-card,
+  .admin-email-usage-grid,
   .admin-notification-email-card,
   .admin-appointment-editor-grid {
     grid-template-columns: 1fr;

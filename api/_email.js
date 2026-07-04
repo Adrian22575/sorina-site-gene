@@ -4,6 +4,7 @@ import {
   cleanString,
   isValidDate,
   normalizeTime,
+  serviceDurationMinutes,
   supabaseBookingFetch,
   todayInBucharest,
   tomorrowInBucharest,
@@ -17,6 +18,26 @@ const defaultNotificationSettings = {
   notify_client_day_before: true,
   notify_client_hour_before: true,
 }
+
+const resendFreeLimits = {
+  daily: 100,
+  monthly: 3000,
+}
+
+const emptyEmailUsageBucket = {
+  sent: 0,
+  pending: 0,
+  failed: 0,
+  skipped: 0,
+  total: 0,
+}
+
+const fallbackServiceDurations = new Map([
+  ['Efect natural', 60],
+  ['Volum delicat', 90],
+  ['Efect intens', 120],
+  ['Laminare gene / sprancene', 60],
+])
 
 const activeStatuses = new Set(['new', 'contacted', 'confirmed'])
 const reminderStatuses = new Set(['confirmed'])
@@ -171,12 +192,45 @@ function emailActionsHtml(actions = []) {
   `
 }
 
+function durationLabel(minutes) {
+  return `${serviceDurationMinutes({ duration: `${Number(minutes) || 0} min` })} min`
+}
+
+async function serviceDurationLabel(config, serviceTitle) {
+  const title = cleanString(serviceTitle || '', 160)
+  if (!title) return ''
+
+  const result = await supabaseBookingFetch(
+    config,
+    `site_services?title=eq.${encodeURIComponent(title)}&select=title,duration&limit=1`,
+  )
+
+  if (result.ok) {
+    const rows = await result.json().catch(() => [])
+    if (rows[0]) return durationLabel(serviceDurationMinutes(rows[0]))
+  }
+
+  return durationLabel(serviceDurationMinutes(title, fallbackServiceDurations))
+}
+
+async function appointmentForEmail(config, appointment) {
+  return {
+    ...appointment,
+    duration_label: await serviceDurationLabel(config, appointment.service),
+  }
+}
+
+async function appointmentsForEmail(config, appointments = []) {
+  return Promise.all(appointments.map((appointment) => appointmentForEmail(config, appointment)))
+}
+
 function appointmentHtml(title, appointment, intro, actions = []) {
   const rows = [
     ['Clienta', appointment.full_name],
     ['Telefon', appointment.phone],
     ['Email', appointment.email],
     ['Serviciu', appointment.service],
+    ['Durata serviciu', appointment.duration_label],
     ['Data', appointment.preferred_date],
     ['Ora', normalizeTime(appointment.preferred_time)],
     ['Status', appointment.status || 'new'],
@@ -205,6 +259,7 @@ function appointmentHtml(title, appointment, intro, actions = []) {
 function clientAppointmentHtml(title, appointment, intro) {
   const rows = [
     ['Serviciu', appointment.service],
+    ['Durata serviciu', appointment.duration_label],
     ['Data', appointment.preferred_date],
     ['Ora', normalizeTime(appointment.preferred_time)],
     ['Telefon studio', process.env.PUBLIC_CONTACT_PHONE || 'Telefonul studioului este afisat pe site.'],
@@ -233,6 +288,7 @@ function digestHtml(date, appointments) {
       <td style="border-top:1px solid #eaded7;padding:10px 12px">${escapeHtml(normalizeTime(appointment.preferred_time) || '-')}</td>
       <td style="border-top:1px solid #eaded7;padding:10px 12px">${escapeHtml(appointment.full_name || 'Clienta')}</td>
       <td style="border-top:1px solid #eaded7;padding:10px 12px">${escapeHtml(appointment.service || '-')}</td>
+      <td style="border-top:1px solid #eaded7;padding:10px 12px">${escapeHtml(appointment.duration_label || '-')}</td>
       <td style="border-top:1px solid #eaded7;padding:10px 12px">${escapeHtml(appointment.phone || '-')}</td>
     </tr>
   `).join('')
@@ -247,6 +303,7 @@ function digestHtml(date, appointments) {
             <th align="left" style="padding:10px 12px">Ora</th>
             <th align="left" style="padding:10px 12px">Clienta</th>
             <th align="left" style="padding:10px 12px">Serviciu</th>
+            <th align="left" style="padding:10px 12px">Durata</th>
             <th align="left" style="padding:10px 12px">Telefon</th>
           </tr>
         </thead>
@@ -421,6 +478,67 @@ function reminderDateForAppointment(appointment, minutesBefore = 60) {
   return reminderDate
 }
 
+function monthAfter(dateValue) {
+  if (!isValidDate(dateValue)) return dateValue
+  const [year, month] = dateValue.split('-').map(Number)
+  return new Date(Date.UTC(year, month, 1)).toISOString().slice(0, 10)
+}
+
+function countFromContentRange(value) {
+  const match = String(value || '').match(/\/(\d+)$/)
+  return match ? Number(match[1]) : 0
+}
+
+async function countNotificationsBetween(config, startDate, endDate, status) {
+  const start = encodeURIComponent(startDate.toISOString())
+  const end = encodeURIComponent(endDate.toISOString())
+  const result = await supabaseBookingFetch(
+    config,
+    `appointment_notifications?created_at=gte.${start}&created_at=lt.${end}&status=eq.${encodeURIComponent(status)}&select=id`,
+    { headers: { Prefer: 'count=exact', Range: '0-0' } },
+  )
+
+  if (!result.ok) return 0
+  return countFromContentRange(result.headers.get('content-range'))
+}
+
+async function emailUsageBucketBetween(config, startDate, endDate) {
+  const statuses = ['sent', 'pending', 'failed', 'skipped']
+  const counts = await Promise.all(statuses.map((status) => countNotificationsBetween(config, startDate, endDate, status)))
+  const bucket = statuses.reduce((usage, status, index) => ({
+    ...usage,
+    [status]: counts[index] || 0,
+  }), { ...emptyEmailUsageBucket })
+
+  return {
+    ...bucket,
+    total: bucket.sent + bucket.pending + bucket.failed + bucket.skipped,
+  }
+}
+
+export async function readEmailUsage(config) {
+  const today = todayInBucharest()
+  const tomorrow = dateAfterDays(today, 1)
+  const monthStartKey = `${today.slice(0, 7)}-01`
+  const nextMonthStartKey = monthAfter(monthStartKey)
+  const dayStart = zonedDateTimeToUtc(today, '00:00') || new Date()
+  const dayEnd = zonedDateTimeToUtc(tomorrow, '00:00') || new Date()
+  const monthStart = zonedDateTimeToUtc(monthStartKey, '00:00') || dayStart
+  const monthEnd = zonedDateTimeToUtc(nextMonthStartKey, '00:00') || dayEnd
+  const [day, month] = await Promise.all([
+    emailUsageBucketBetween(config, dayStart, dayEnd),
+    emailUsageBucketBetween(config, monthStart, monthEnd),
+  ])
+
+  return {
+    limits: resendFreeLimits,
+    day,
+    month,
+    generated_at: new Date().toISOString(),
+    source: 'site_logs',
+  }
+}
+
 export async function sendNewAppointmentEmail(config, appointment) {
   const settings = await readNotificationSettings(config)
   if (!settings.notify_new || !settings.email) {
@@ -438,10 +556,11 @@ export async function sendNewAppointmentEmail(config, appointment) {
   }
 
   const subject = `Programare noua: ${appointmentTitle(appointment)}`
+  const emailAppointment = await appointmentForEmail(config, appointment)
   const result = await sendResendEmail({
     to: settings.email,
     subject,
-    html: appointmentHtml(subject, appointment, 'A intrat o cerere noua de programare.', appointmentActionLinks(appointment)),
+    html: appointmentHtml(subject, emailAppointment, 'A intrat o cerere noua de programare.', appointmentActionLinks(appointment)),
     idempotencyKey: `new-${appointment.id}`,
   })
 
@@ -495,12 +614,13 @@ export async function sendClientConfirmedEmail(config, appointment) {
   }
 
   const subject = 'Programarea ta la Sorina a fost confirmata'
+  const emailAppointment = await appointmentForEmail(config, appointment)
   const result = await sendResendEmail({
     to: appointment.email,
     subject,
     html: clientAppointmentHtml(
       subject,
-      appointment,
+      emailAppointment,
       'Buna! Programarea ta a fost confirmata. Te asteptam la data si ora de mai jos.',
     ),
     idempotencyKey: `client-confirmed-${appointment.id}-${appointment.preferred_date}-${normalizeTime(appointment.preferred_time)}`,
@@ -530,13 +650,14 @@ export async function replaceAppointmentReminder(config, appointment) {
   if (!activeStatuses.has(appointment.status || 'new')) return
   if (!reminderStatuses.has(appointment.status || 'new')) return
 
+  const emailAppointment = await appointmentForEmail(config, appointment)
   const ownerReminderDate = reminderDateForAppointment(appointment)
   if (settings.notify_before && settings.email && ownerReminderDate) {
     const subject = `Reminder peste o ora: ${appointmentTitle(appointment)}`
     const result = await sendResendEmail({
       to: settings.email,
       subject,
-      html: appointmentHtml(subject, appointment, 'Programarea aceasta incepe in aproximativ o ora.'),
+      html: appointmentHtml(subject, emailAppointment, 'Programarea aceasta incepe in aproximativ o ora.'),
       scheduledAt: ownerReminderDate.toISOString(),
       idempotencyKey: `one-hour-${appointment.id}-${appointment.preferred_date}-${normalizeTime(appointment.preferred_time)}`,
     })
@@ -561,7 +682,7 @@ export async function replaceAppointmentReminder(config, appointment) {
       const result = await sendResendEmail({
         to: appointment.email,
         subject,
-        html: clientAppointmentHtml(subject, appointment, 'Buna! Iti reamintim ca ai programare maine la Sorina Lash Studio.'),
+        html: clientAppointmentHtml(subject, emailAppointment, 'Buna! Iti reamintim ca ai programare maine la Sorina Lash Studio.'),
         scheduledAt: clientDayReminderDate.toISOString(),
         idempotencyKey: `client-day-${appointment.id}-${appointment.preferred_date}-${normalizeTime(appointment.preferred_time)}`,
       })
@@ -585,7 +706,7 @@ export async function replaceAppointmentReminder(config, appointment) {
       const result = await sendResendEmail({
         to: appointment.email,
         subject,
-        html: clientAppointmentHtml(subject, appointment, 'Buna! Programarea ta la Sorina Lash Studio incepe in aproximativ o ora.'),
+        html: clientAppointmentHtml(subject, emailAppointment, 'Buna! Programarea ta la Sorina Lash Studio incepe in aproximativ o ora.'),
         scheduledAt: clientHourReminderDate.toISOString(),
         idempotencyKey: `client-hour-${appointment.id}-${appointment.preferred_date}-${normalizeTime(appointment.preferred_time)}`,
       })
@@ -671,11 +792,12 @@ export async function sendTomorrowAppointmentDigest(config) {
   }
 
   const appointments = await appointmentsForDate(config, digestDate)
+  const emailAppointments = await appointmentsForEmail(config, appointments)
   const subject = `Maine ai ${appointments.length} programari`
   const result = await sendResendEmail({
     to: settings.email,
     subject,
-    html: digestHtml(digestDate, appointments),
+    html: digestHtml(digestDate, emailAppointments),
     idempotencyKey: `daily-${digestDate}`,
   })
 
