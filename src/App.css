@@ -1241,6 +1241,27 @@ form button:disabled {
   color: white;
 }
 
+.admin-notification-warning {
+  background: #fff8ef;
+  border: 1px solid rgba(213, 168, 95, 0.5);
+  border-radius: 8px;
+  color: #6b4c1f;
+  display: grid;
+  gap: 4px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+}
+
+.admin-notification-warning strong {
+  color: var(--wine);
+  font-size: 13px;
+}
+
+.admin-notification-warning span {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .admin-calendar-layout {
   display: grid;
   gap: 16px;
@@ -1620,6 +1641,80 @@ form button:disabled {
   justify-content: flex-end;
 }
 
+.admin-editor-backdrop {
+  align-items: start;
+  background: rgba(36, 25, 23, 0.48);
+  display: grid;
+  inset: 0;
+  justify-items: center;
+  overflow-y: auto;
+  padding: 38px 18px;
+  position: fixed;
+  z-index: 80;
+}
+
+.admin-appointment-editor {
+  background: #fffdf9;
+  border: 1px solid rgba(111, 19, 38, 0.24);
+  border-radius: 8px;
+  box-shadow: 0 28px 80px rgba(45, 28, 18, 0.28);
+  max-width: 860px;
+  width: min(860px, 100%);
+}
+
+.admin-appointment-editor form {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+}
+
+.admin-appointment-editor-header {
+  align-items: start;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  padding-bottom: 14px;
+}
+
+.admin-appointment-editor-header h3 {
+  color: var(--wine);
+  font-size: 24px;
+}
+
+.admin-appointment-editor-header span {
+  color: var(--soft-ink);
+  display: block;
+  font-size: 13px;
+  margin-top: 5px;
+}
+
+.admin-appointment-editor-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-appointment-editor-summary > span:not(.admin-mail-status) {
+  background: #fbf8f4;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--soft-ink);
+  font-size: 12px;
+  font-weight: 800;
+  min-height: 30px;
+  padding: 8px 10px;
+}
+
+.admin-appointment-editor-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-appointment-editor-actions {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
 .admin-appointment-settings-header {
   align-items: center;
   display: flex;
@@ -1979,7 +2074,8 @@ form button:disabled {
   .admin-result-grid,
   .admin-cropper,
   .admin-calendar-layout,
-  .admin-day-timeline-card {
+  .admin-day-timeline-card,
+  .admin-appointment-editor-grid {
     grid-template-columns: 1fr;
   }
 
@@ -2269,6 +2365,24 @@ form button:disabled {
   .admin-day-timeline-actions button,
   .admin-day-agenda-actions button,
   .admin-inline-action {
+    width: 100%;
+  }
+
+  .admin-editor-backdrop {
+    padding: 10px;
+  }
+
+  .admin-appointment-editor form {
+    padding: 14px;
+  }
+
+  .admin-appointment-editor-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-appointment-editor-header button,
+  .admin-appointment-editor-actions button {
     width: 100%;
   }
 }

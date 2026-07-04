@@ -15,7 +15,6 @@ import {
   ExternalLink,
   Gift,
   Heart,
-  ListChecks,
   LogOut,
   MapPin,
   Phone,
@@ -923,6 +922,7 @@ function AdminApp({ appointmentsOnly = false }) {
   const [appointments, setAppointments] = useState([])
   const [appointmentView, setAppointmentView] = useState('calendar')
   const [appointmentFilter, setAppointmentFilter] = useState('active')
+  const [appointmentDraft, setAppointmentDraft] = useState(null)
   const [calendarMonth, setCalendarMonth] = useState(() => monthKeyFromDate())
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(() => bucharestDateString())
   const [notificationSettings, setNotificationSettings] = useState(defaultNotificationSettings)
@@ -1093,6 +1093,7 @@ function AdminApp({ appointmentsOnly = false }) {
     setPassword('')
     setServices([])
     setAppointments([])
+    setAppointmentDraft(null)
     setNotificationSettings(defaultNotificationSettings)
     setBookingSettings(defaultBookingSettings)
     setAdminSlots([])
@@ -1145,25 +1146,54 @@ function AdminApp({ appointmentsOnly = false }) {
     })
   }
 
-  function updateAppointment(index, field, value) {
-    setAppointments((current) => current.map((appointment, itemIndex) => (
-      itemIndex === index ? { ...appointment, [field]: value } : appointment
-    )))
+  function updateAppointmentDraft(field, value) {
+    setAppointmentDraft((current) => (current ? { ...current, [field]: value } : current))
+  }
+
+  function openAppointmentEditor(appointment) {
+    setAppointmentDraft(normalizeAppointment(appointment))
+  }
+
+  function closeAppointmentEditor() {
+    setAppointmentDraft(null)
+  }
+
+  function trapAppointmentEditorFocus(event) {
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      closeAppointmentEditor()
+      return
+    }
+
+    if (event.key !== 'Tab') return
+
+    const focusableElements = Array.from(event.currentTarget.querySelectorAll(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])',
+    ))
+
+    if (!focusableElements.length) return
+
+    const firstElement = focusableElements[0]
+    const lastElement = focusableElements[focusableElements.length - 1]
+
+    if (event.shiftKey && document.activeElement === firstElement) {
+      event.preventDefault()
+      lastElement.focus()
+    } else if (!event.shiftKey && document.activeElement === lastElement) {
+      event.preventDefault()
+      firstElement.focus()
+    }
   }
 
   function addAppointment() {
-    const preferredDate = appointmentView === 'calendar' ? selectedCalendarDate : bucharestDateString()
-    setAppointments((current) => [
-      normalizeAppointment({
-        full_name: 'Clienta noua',
-        preferred_date: preferredDate,
-        preferred_time: adminSlots[0] || '10:00',
-        status: 'new',
-      }),
-      ...current,
-    ])
-    setAppointmentView('list')
-    setStatus({ state: 'success', message: 'Programare noua adaugata. Completeaza datele si apasa Salveaza.' })
+    openAppointmentEditor({
+      full_name: 'Clienta noua',
+      preferred_date: selectedCalendarDate || bucharestDateString(),
+      preferred_time: adminSlots[0] || '10:00',
+      status: 'new',
+      source: 'admin',
+    })
+    setStatus({ state: 'success', message: 'Programare noua pregatita. Completeaza datele si apasa Salveaza.' })
   }
 
   function updateCollection(collection, index, field, value) {
@@ -1331,25 +1361,35 @@ function AdminApp({ appointmentsOnly = false }) {
     }
   }
 
-  async function saveAppointment(index) {
-    const appointment = appointments[index]
+  async function saveAppointmentDraft() {
+    if (!appointmentDraft) return
     setStatus({ state: 'loading', message: 'Se salveaza programarea...' })
 
     try {
       const data = await adminRequest(
-        appointment.id
-          ? `/api/admin/appointments?id=${encodeURIComponent(appointment.id)}`
+        appointmentDraft.id
+          ? `/api/admin/appointments?id=${encodeURIComponent(appointmentDraft.id)}`
           : '/api/admin/appointments',
         {
-          method: appointment.id ? 'PATCH' : 'POST',
-          body: JSON.stringify(appointment),
+          method: appointmentDraft.id ? 'PATCH' : 'POST',
+          body: JSON.stringify(appointmentDraft),
         },
       )
 
       if (!data.appointment) throw new Error('Serverul nu a returnat programarea salvata.')
-      setAppointments((current) => current.map((currentAppointment, itemIndex) => (
-        itemIndex === index ? normalizeAppointment(data.appointment) : currentAppointment
-      )))
+      const savedAppointment = normalizeAppointment(data.appointment)
+      setAppointments((current) => {
+        if (appointmentDraft.id) {
+          return current.map((currentAppointment) => (
+            currentAppointment.id === appointmentDraft.id ? savedAppointment : currentAppointment
+          ))
+        }
+
+        return [savedAppointment, ...current]
+      })
+      setAppointmentDraft(savedAppointment)
+      setSelectedCalendarDate(savedAppointment.preferred_date || selectedCalendarDate)
+      if (savedAppointment.preferred_date) setCalendarMonth(monthKeyFromDate(localDateFromString(savedAppointment.preferred_date) || new Date()))
       setStatus({ state: 'success', message: 'Programarea a fost salvata.' })
     } catch (error) {
       setStatus({ state: 'error', message: error.message })
@@ -1367,20 +1407,24 @@ function AdminApp({ appointmentsOnly = false }) {
       })
 
       if (!data.appointment) throw new Error('Serverul nu a returnat programarea salvata.')
+      const savedAppointment = normalizeAppointment(data.appointment)
       setAppointments((current) => current.map((currentAppointment) => (
-        currentAppointment.id === appointment.id ? normalizeAppointment(data.appointment) : currentAppointment
+        currentAppointment.id === appointment.id ? savedAppointment : currentAppointment
       )))
+      setAppointmentDraft((current) => (
+        current?.id === appointment.id ? savedAppointment : current
+      ))
       setStatus({ state: 'success', message: 'Programarea a fost confirmata.' })
     } catch (error) {
       setStatus({ state: 'error', message: error.message })
     }
   }
 
-  async function deleteAppointment(index) {
-    const appointment = appointments[index]
+  async function deleteAppointmentDraft() {
+    if (!appointmentDraft) return
 
-    if (!appointment.id) {
-      setAppointments((current) => current.filter((_, itemIndex) => itemIndex !== index))
+    if (!appointmentDraft.id) {
+      setAppointmentDraft(null)
       return
     }
 
@@ -1389,8 +1433,9 @@ function AdminApp({ appointmentsOnly = false }) {
     setStatus({ state: 'loading', message: 'Se sterge programarea...' })
 
     try {
-      await adminRequest(`/api/admin/appointments?id=${encodeURIComponent(appointment.id)}`, { method: 'DELETE' })
-      setAppointments((current) => current.filter((_, itemIndex) => itemIndex !== index))
+      await adminRequest(`/api/admin/appointments?id=${encodeURIComponent(appointmentDraft.id)}`, { method: 'DELETE' })
+      setAppointments((current) => current.filter((appointment) => appointment.id !== appointmentDraft.id))
+      setAppointmentDraft(null)
       setStatus({ state: 'success', message: 'Programarea a fost stearsa.' })
     } catch (error) {
       setStatus({ state: 'error', message: error.message })
@@ -2077,6 +2122,7 @@ function AdminApp({ appointmentsOnly = false }) {
   const todayKey = bucharestDateString()
   const weekdayLabels = calendarDays.slice(0, 7).map(({ date }) => weekdayFormatter.format(date))
   const selectedFilterLabel = appointmentFilterOptions.find((option) => option.value === appointmentFilter)?.label || 'Programari'
+  const appointmentDraftMail = appointmentDraft ? appointmentNotificationMeta(appointmentDraft) : null
 
   if (!isLoggedIn) {
     return (
@@ -2380,15 +2426,6 @@ function AdminApp({ appointmentsOnly = false }) {
             >
               <Clock size={16} /> Zi
             </button>
-            <button
-              type="button"
-              className={appointmentView === 'list' ? 'admin-view-active' : ''}
-              onClick={() => setAppointmentView('list')}
-              role="tab"
-              aria-selected={appointmentView === 'list'}
-            >
-              <ListChecks size={16} /> Lista
-            </button>
           </div>
           <div className="admin-calendar-nav">
             <button type="button" className="admin-secondary" onClick={() => setCalendarMonth((current) => addMonthsToKey(current, -1))} disabled={isBusy} aria-label="Luna anterioara">
@@ -2424,6 +2461,12 @@ function AdminApp({ appointmentsOnly = false }) {
             </button>
           ))}
         </div>
+        {!notificationSettings.email ? (
+          <div className="admin-notification-warning">
+            <strong>Email notificari lipsa</strong>
+            <span>Adauga emailul Sorinei mai jos si trimite un test, altfel programarile noi nu au unde sa fie anuntate.</span>
+          </div>
+        ) : null}
 
         {appointmentView === 'calendar' ? (
           <div className="admin-calendar-layout">
@@ -2499,6 +2542,9 @@ function AdminApp({ appointmentsOnly = false }) {
                           Confirma
                         </button>
                       ) : null}
+                      <button type="button" className="admin-inline-action admin-secondary" onClick={() => openAppointmentEditor(appointment)} disabled={isBusy}>
+                        Editeaza
+                      </button>
                     </article>
                   )
                 }) : (
@@ -2508,9 +2554,6 @@ function AdminApp({ appointmentsOnly = false }) {
               <div className="admin-day-agenda-actions">
                 <button type="button" className="admin-secondary" onClick={() => setAppointmentView('day')}>
                   <Clock size={16} /> Vezi ziua
-                </button>
-                <button type="button" className="admin-secondary" onClick={() => setAppointmentView('list')}>
-                  <ListChecks size={16} /> Editeaza in lista
                 </button>
               </div>
             </aside>
@@ -2559,7 +2602,7 @@ function AdminApp({ appointmentsOnly = false }) {
                             Confirma
                           </button>
                         ) : null}
-                        <button type="button" onClick={() => setAppointmentView('list')} className="admin-secondary">
+                        <button type="button" onClick={() => openAppointmentEditor(appointment)} className="admin-secondary" disabled={isBusy}>
                           Editeaza
                         </button>
                       </div>
@@ -2668,107 +2711,125 @@ function AdminApp({ appointmentsOnly = false }) {
           </div>
         </div>
 
-        {appointmentView === 'list' ? (
-        <div className="admin-service-list">
-          {filteredAppointments.map((appointment) => {
-            const index = appointments.indexOf(appointment)
-            const mailMeta = appointmentNotificationMeta(appointment)
-            return (
-            <article className={`admin-service admin-appointment ${appointment.id ? '' : 'admin-service-new'}`} key={appointment.id || `appointment-${index}`}>
-              {!appointment.id ? <AdminNewBadge /> : null}
-              <div className="admin-appointment-meta">
-                <strong>{appointment.preferred_date || 'Data lipsa'} - {appointmentIntervalLabel(appointment, services)}</strong>
-                <div>
-                  <span>{appointmentStatusLabel(appointment.status)}</span>
-                  <span className={`admin-mail-status admin-mail-status-${mailMeta.tone}`} title={mailMeta.detail || mailMeta.label}>
-                    {mailMeta.label}
-                  </span>
-                </div>
-              </div>
-              <div className="admin-service-grid">
-                <label>
-                  Nume clienta
-                  <input value={appointment.full_name} onChange={(event) => updateAppointment(index, 'full_name', event.target.value)} />
-                </label>
-                <label>
-                  Telefon
-                  <input value={appointment.phone} onChange={(event) => updateAppointment(index, 'phone', event.target.value)} />
-                </label>
-                <label>
-                  Email clienta
-                  <input type="email" value={appointment.email} onChange={(event) => updateAppointment(index, 'email', event.target.value)} />
-                </label>
-                <label>
-                  Status
-                  <select value={appointment.status} onChange={(event) => updateAppointment(index, 'status', event.target.value)}>
-                    {appointmentStatusOptions.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Data
-                  <input type="date" value={appointment.preferred_date} onChange={(event) => updateAppointment(index, 'preferred_date', event.target.value)} />
-                </label>
-                <label>
-                  Ora
-                  <select value={appointment.preferred_time} onChange={(event) => updateAppointment(index, 'preferred_time', event.target.value)}>
-                    <option value="">Alege ora</option>
-                    {appointment.preferred_time && !adminSlots.includes(appointment.preferred_time) ? (
-                      <option value={appointment.preferred_time}>{appointment.preferred_time} (in afara programului curent)</option>
-                    ) : null}
-                    {adminSlots.map((slot) => (
-                      <option key={slot} value={slot}>{slot}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="full">
-                  Serviciu
-                  <select value={appointment.service} onChange={(event) => updateAppointment(index, 'service', event.target.value)}>
-                    <option value="">Alege serviciu</option>
-                    {appointment.service && !services.some((service) => service.title === appointment.service) ? (
-                      <option value={appointment.service}>{appointment.service}</option>
-                    ) : null}
-                    {services.map((service) => (
-                      <option key={service.id || service.title} value={service.title}>{service.title}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="full">
-                  Mesaj clienta
-                  <textarea rows="3" value={appointment.message} onChange={(event) => updateAppointment(index, 'message', event.target.value)} />
-                </label>
-                <label className="full">
-                  Note interne Sorina
-                  <textarea rows="3" value={appointment.internal_notes} onChange={(event) => updateAppointment(index, 'internal_notes', event.target.value)} />
-                </label>
-              </div>
-              <div className="admin-row-actions">
-                <button type="button" onClick={() => saveAppointment(index)} disabled={isBusy}>
-                  <Save size={16} /> {isBusy ? 'Se salveaza...' : 'Salveaza'}
-                </button>
-                {appointment.status === 'new' && appointment.id ? (
-                  <button type="button" className="admin-secondary" onClick={() => confirmAppointment(appointment)} disabled={isBusy}>
-                    Confirma
+        {appointmentDraft ? (
+          <div className="admin-editor-backdrop" role="presentation">
+            <section
+              className="admin-appointment-editor"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="appointment-editor-title"
+              onKeyDown={trapAppointmentEditorFocus}
+            >
+              <form onSubmit={(event) => {
+                event.preventDefault()
+                saveAppointmentDraft()
+              }}>
+                <div className="admin-appointment-editor-header">
+                  <div>
+                    <p className="eyebrow">{appointmentDraft.id ? 'Editare programare' : 'Programare noua'}</p>
+                    <h3 id="appointment-editor-title">{appointmentDraft.full_name || 'Clienta'}</h3>
+                    <span>{appointmentIntervalLabel(appointmentDraft, services)} - {appointmentDraft.service || 'Serviciu neales'}</span>
+                  </div>
+                  <button type="button" className="admin-secondary" onClick={closeAppointmentEditor} disabled={isBusy}>
+                    Inchide
                   </button>
-                ) : null}
-                <button
-                  type="button"
-                  className="admin-secondary"
-                  onClick={() => updateAppointment(index, 'status', 'cancelled')}
-                  disabled={isBusy || appointment.status === 'cancelled'}
-                >
-                  Anuleaza
-                </button>
-                <button type="button" className="admin-danger" onClick={() => deleteAppointment(index)} disabled={isBusy}>
-                  <Trash2 size={16} /> Sterge
-                </button>
-              </div>
-            </article>
-            )
-          })}
-        </div>
+                </div>
+
+                <div className="admin-appointment-editor-summary">
+                  <span>{appointmentStatusLabel(appointmentDraft.status)}</span>
+                  {appointmentDraftMail ? (
+                    <span className={`admin-mail-status admin-mail-status-${appointmentDraftMail.tone}`} title={appointmentDraftMail.detail || appointmentDraftMail.label}>
+                      {appointmentDraftMail.label}
+                    </span>
+                  ) : null}
+                  <span>{appointmentDurationLabel(appointmentDraft, services)}</span>
+                </div>
+
+                <div className="admin-service-grid admin-appointment-editor-grid">
+                  <label>
+                    Nume clienta
+                    <input autoFocus value={appointmentDraft.full_name} onChange={(event) => updateAppointmentDraft('full_name', event.target.value)} />
+                  </label>
+                  <label>
+                    Telefon
+                    <input value={appointmentDraft.phone} onChange={(event) => updateAppointmentDraft('phone', event.target.value)} />
+                  </label>
+                  <label>
+                    Email clienta
+                    <input type="email" value={appointmentDraft.email} onChange={(event) => updateAppointmentDraft('email', event.target.value)} />
+                  </label>
+                  <label>
+                    Status
+                    <select value={appointmentDraft.status} onChange={(event) => updateAppointmentDraft('status', event.target.value)}>
+                      {appointmentStatusOptions.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Data
+                    <input type="date" value={appointmentDraft.preferred_date} onChange={(event) => updateAppointmentDraft('preferred_date', event.target.value)} />
+                  </label>
+                  <label>
+                    Ora
+                    <select value={appointmentDraft.preferred_time} onChange={(event) => updateAppointmentDraft('preferred_time', event.target.value)}>
+                      <option value="">Alege ora</option>
+                      {appointmentDraft.preferred_time && !adminSlots.includes(appointmentDraft.preferred_time) ? (
+                        <option value={appointmentDraft.preferred_time}>{appointmentDraft.preferred_time} (in afara programului curent)</option>
+                      ) : null}
+                      {adminSlots.map((slot) => (
+                        <option key={slot} value={slot}>{slot}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="full">
+                    Serviciu
+                    <select value={appointmentDraft.service} onChange={(event) => updateAppointmentDraft('service', event.target.value)}>
+                      <option value="">Alege serviciu</option>
+                      {appointmentDraft.service && !services.some((service) => service.title === appointmentDraft.service) ? (
+                        <option value={appointmentDraft.service}>{appointmentDraft.service}</option>
+                      ) : null}
+                      {services.map((service) => (
+                        <option key={service.id || service.title} value={service.title}>{service.title}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="full">
+                    Mesaj clienta
+                    <textarea rows="3" value={appointmentDraft.message} onChange={(event) => updateAppointmentDraft('message', event.target.value)} />
+                  </label>
+                  <label className="full">
+                    Note interne Sorina
+                    <textarea rows="3" value={appointmentDraft.internal_notes} onChange={(event) => updateAppointmentDraft('internal_notes', event.target.value)} />
+                  </label>
+                </div>
+
+                <div className="admin-row-actions admin-appointment-editor-actions">
+                  <button type="submit" disabled={isBusy}>
+                    <Save size={16} /> {isBusy ? 'Se salveaza...' : 'Salveaza'}
+                  </button>
+                  {appointmentDraft.status === 'new' && appointmentDraft.id ? (
+                    <button type="button" className="admin-secondary" onClick={() => confirmAppointment(appointmentDraft)} disabled={isBusy}>
+                      Confirma
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="admin-secondary"
+                    onClick={() => updateAppointmentDraft('status', 'cancelled')}
+                    disabled={isBusy || appointmentDraft.status === 'cancelled'}
+                  >
+                    Anuleaza
+                  </button>
+                  <button type="button" className="admin-danger" onClick={deleteAppointmentDraft} disabled={isBusy}>
+                    <Trash2 size={16} /> Sterge
+                  </button>
+                </div>
+              </form>
+            </section>
+          </div>
         ) : null}
+
       </section>
       ) : null}
 

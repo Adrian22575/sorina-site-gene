@@ -319,3 +319,11 @@
 - Days with new appointment requests display a compact "noi" badge.
 - Added quick confirm actions for new appointments in the agenda, day view, and list view.
 - Admin appointment reads now include recent notification logs, and the UI shows email status such as sent, scheduled, failed, skipped, or missing log.
+
+## 2026-07-04 Focused Appointment Editing
+
+- Removed the standalone appointments list view from `/admin/programari`.
+- Added direct `Editeaza` actions in the calendar agenda and day timeline.
+- Added a focused appointment editor dialog so Sorina edits one appointment at a time.
+- `Adauga programare` now opens the same focused editor instead of inserting a draft card into a long list.
+- Added basic modal keyboard behavior and a warning when the owner notification email is missing.

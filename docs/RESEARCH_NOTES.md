@@ -225,3 +225,18 @@ Applied decisions:
 - Keep the month view compact, but show start-end intervals now that service duration controls availability.
 - Add status filters and visible new-request badges so Sorina can find unconfirmed appointments quickly.
 - Surface notification log status in the appointment UI so email delivery problems are visible without opening database logs.
+
+## 2026-07-04 Focused Appointment Editing Pass
+
+Sources checked:
+
+- FullCalendar event click docs: https://fullcalendar.io/docs/eventClick
+- WAI-ARIA modal dialog pattern: https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/
+
+Applied decisions:
+
+- Remove the full list editing view because it creates too much page length and duplicates calendar/day workflows.
+- Put edit actions directly on appointment cards in calendar agenda and day timeline.
+- Use a focused dialog for one appointment at a time so Sorina edits only the selected client without scanning unrelated cards.
+- Add basic dialog keyboard behavior: focus starts inside the editor, Tab cycles inside it, and Escape closes it.
+- Show a warning when the notification email is missing because booking success without owner email creates hidden operational risk.
